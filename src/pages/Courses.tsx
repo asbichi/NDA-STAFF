@@ -1,9 +1,11 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
-import { Book, Microscope, Calculator, Globe, Palette, Music, Cpu, Languages, Briefcase, Landmark, PenTool } from 'lucide-react';
+import { Book, Microscope, Calculator, Globe, Palette, Music, Cpu, Languages, Briefcase, Landmark, PenTool, ChevronDown, ChevronUp, GraduationCap, User, Home, Mail, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const curriculum = {
   jss: [
@@ -39,6 +41,21 @@ const curriculum = {
 };
 
 export default function Courses() {
+  const [isLoginDropdownOpen, setIsLoginDropdownOpen] = useState(false);
+  const loginDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (loginDropdownRef.current && !loginDropdownRef.current.contains(event.target as Node)) {
+        setIsLoginDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Navigation */}
@@ -47,13 +64,91 @@ export default function Courses() {
           <img src={LOGO_BASE64} alt="NDA Logo" className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shrink-0"  />
           <span className="font-serif font-bold text-sm tracking-wider uppercase text-white">NDA STAFF SECONDARY SCHOOL</span>
         </Link>
-        <div className="flex items-center gap-6 text-sm font-medium">
-          <Link to="/" className="hover:text-blue-300 transition-colors">HOME</Link>
-          <Link to="/about" className="hover:text-blue-300 transition-colors">ABOUT</Link>
-          <Link to="/contact" className="hover:text-blue-300 transition-colors">CONTACT</Link>
-          <Link to="/login">
-            <Button variant="outline" className="border-white text-white hover:bg-white hover:text-primary">LOGIN</Button>
-          </Link>
+        <div className="flex items-center gap-4 text-sm font-medium">
+          <Link to="/" className="hover:text-blue-300 transition-colors hidden md:block">HOME</Link>
+          <Link to="/about" className="hover:text-blue-300 transition-colors hidden md:block">ABOUT</Link>
+          <Link to="/contact" className="hover:text-blue-300 transition-colors hidden md:block">CONTACT</Link>
+          
+          {/* Desktop Login Buttons */}
+          <div className="hidden md:flex items-center gap-2">
+            <Link to="/login?role=admin">
+              <Button variant="outline" className="border-white text-white hover:bg-white hover:text-primary text-xs uppercase tracking-wider px-3 h-9">Staff Login</Button>
+            </Link>
+            <Link to="/login?role=student">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white text-xs uppercase tracking-wider px-3 h-9">Student Portal</Button>
+            </Link>
+          </div>
+
+          {/* Mobile Login Dropdown */}
+          <div className="relative md:hidden" ref={loginDropdownRef}>
+            <Button
+              onClick={() => setIsLoginDropdownOpen(!isLoginDropdownOpen)}
+              variant="outline"
+              className="border-white text-white hover:bg-white hover:text-primary text-xs uppercase tracking-wider px-3 h-9 flex items-center gap-1"
+            >
+              <span>Menu</span>
+              {isLoginDropdownOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </Button>
+
+            <AnimatePresence>
+              {isLoginDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  className="absolute right-0 mt-2 w-48 bg-white border border-slate-100 shadow-2xl z-50 rounded-md overflow-hidden text-slate-800"
+                >
+                  <div className="p-1 flex flex-col gap-1">
+                    <Link 
+                      to="/"
+                      onClick={() => setIsLoginDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      <Home className="w-4 h-4 text-slate-400" />
+                      Home
+                    </Link>
+                    <Link 
+                      to="/about"
+                      onClick={() => setIsLoginDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 border-t border-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      <Info className="w-4 h-4 text-slate-400" />
+                      About Us
+                    </Link>
+                    <Link 
+                      to="/contact"
+                      onClick={() => setIsLoginDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 border-t border-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      <Mail className="w-4 h-4 text-slate-400" />
+                      Contact
+                    </Link>
+                    
+                    {/* Divider for logins */}
+                    <div className="border-t border-slate-100 my-1"></div>
+
+                    <Link 
+                      to="/login?role=student"
+                      onClick={() => setIsLoginDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-blue-50 transition-all"
+                    >
+                      <GraduationCap className="w-4 h-4 text-blue-600" />
+                      Student Portal
+                    </Link>
+                    <Link 
+                      to="/login?role=admin"
+                      onClick={() => setIsLoginDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 border-t border-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      <User className="w-4 h-4 text-slate-400" />
+                      Staff Login
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </nav>
 

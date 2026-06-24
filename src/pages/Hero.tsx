@@ -1,11 +1,26 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Globe, Users, ChevronRight, GraduationCap } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Globe, Users, ChevronRight, GraduationCap, ChevronDown, ChevronUp, LogIn, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Hero() {
+  const [isLoginDropdownOpen, setIsLoginDropdownOpen] = useState(false);
+  const loginDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (loginDropdownRef.current && !loginDropdownRef.current.contains(event.target as Node)) {
+        setIsLoginDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-red-600 selection:text-white">
       {/* Navigation */}
@@ -26,16 +41,88 @@ export default function Hero() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link to="/login?role=admin" className="hidden md:block">
-              <Button className="bg-transparent hover:bg-white/10 text-white border border-white/20 text-[10px] font-bold tracking-[0.2em] uppercase px-8 py-3 h-full rounded-md shadow-md transition-all">
-                Staff Login
+            {/* Desktop View Login Buttons */}
+            <div className="hidden md:flex items-center gap-3">
+              <Link to="/login?role=admin">
+                <Button className="bg-transparent hover:bg-white/10 text-white border border-white/20 text-[10px] font-bold tracking-[0.2em] uppercase px-4 py-3 h-full rounded-md shadow-md transition-all">
+                  Staff Login
+                </Button>
+              </Link>
+              <Link to="/login?role=student">
+                <Button className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold tracking-[0.2em] uppercase px-4 py-3 h-full rounded-md shadow-lg shadow-red-600/20 transition-all hover:shadow-xl hover:-translate-y-0.5">
+                  Student Portal
+                </Button>
+              </Link>
+            </div>
+
+            {/* Mobile View Menu Dropdown Menu */}
+            <div className="relative lg:hidden" ref={loginDropdownRef}>
+              <Button
+                onClick={() => setIsLoginDropdownOpen(!isLoginDropdownOpen)}
+                className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold tracking-[0.2em] uppercase px-4 py-2.5 rounded-md flex items-center gap-1.5 shadow-lg shadow-red-600/20 transition-all"
+              >
+                <span>Menu</span>
+                {isLoginDropdownOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </Button>
-            </Link>
-            <Link to="/login?role=student">
-              <Button className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold tracking-[0.2em] uppercase px-8 py-3 h-full rounded-md shadow-lg shadow-red-600/20 transition-all hover:shadow-xl hover:-translate-y-0.5">
-                Student Portal
-              </Button>
-            </Link>
+
+              <AnimatePresence>
+                {isLoginDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 mt-2 w-48 bg-zinc-950 border border-white/10 shadow-2xl z-50 rounded-md overflow-hidden"
+                  >
+                    <div className="p-1 flex flex-col gap-1">
+                      <Link 
+                        to="/about"
+                        onClick={() => setIsLoginDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2.5 text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+                      >
+                        <Users className="w-4 h-4 text-slate-400" />
+                        About Us
+                      </Link>
+                      <Link 
+                        to="/courses"
+                        onClick={() => setIsLoginDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2.5 border-t border-white/5 text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+                      >
+                        <GraduationCap className="w-4 h-4 text-slate-400" />
+                        Academics
+                      </Link>
+                      <Link 
+                        to="/contact"
+                        onClick={() => setIsLoginDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2.5 border-t border-white/5 text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+                      >
+                        <ArrowRight className="w-4 h-4 text-slate-400" />
+                        Contact
+                      </Link>
+                      
+                      {/* Only show logins on screens smaller than md */}
+                      <div className="border-t border-white/10 my-1 md:hidden"></div>
+                      <Link 
+                        to="/login?role=student"
+                        onClick={() => setIsLoginDropdownOpen(false)}
+                        className="flex md:hidden items-center gap-2.5 px-3 py-2.5 text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-white hover:bg-red-600/20 transition-all"
+                      >
+                        <GraduationCap className="w-4 h-4 text-red-500" />
+                        Student Portal
+                      </Link>
+                      <Link 
+                        to="/login?role=admin"
+                        onClick={() => setIsLoginDropdownOpen(false)}
+                        className="flex md:hidden items-center gap-2.5 px-3 py-2.5 border-t border-white/5 text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+                      >
+                        <User className="w-4 h-4 text-slate-400" />
+                        Staff Login
+                      </Link>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </nav>
