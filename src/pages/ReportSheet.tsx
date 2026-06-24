@@ -983,7 +983,7 @@ export default function ReportSheet() {
       </Card>
 
       {showReport && (
-        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="report-sheet-preview-container bg-white p-12 rounded-none shadow-2xl border border-slate-100 print:shadow-none print:border-none print:p-0">
+        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="report-sheet-preview-container bg-white p-4 sm:p-12 rounded-none shadow-2xl border border-slate-100 print:shadow-none print:border-none print:p-0">
           <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-12 border-b border-slate-50 pb-8">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-primary/5 flex items-center justify-center text-primary">
@@ -1027,7 +1027,7 @@ export default function ReportSheet() {
           </div>
 
           {/* Printable templates kept always available in the DOM for PDF engine / browser printers */}
-          <div className={viewMode === 'phone' ? 'absolute left-[-9999px] top-[-9999px] pointer-events-none' : ''}>
+          <div className={viewMode === 'phone' ? 'absolute left-[-9999px] top-[-9999px] pointer-events-none' : 'w-full overflow-x-auto pb-4 custom-scrollbar'}>
             {isBulkMode ? (
               <div ref={bulkReportRef} className="m-0 p-0 overflow-visible w-[210mm] mx-auto">
                 {studentReports.map((report, idx) => (

@@ -183,27 +183,35 @@ export default function CBTExam() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="bg-primary text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <img src={LOGO_BASE64} alt="Logo" className="w-10 h-10 bg-white rounded-full p-1" />
-          <div>
-            <h1 className="font-bold text-lg leading-tight">CBT EXAMINATION</h1>
-            <p className="text-xs text-blue-200">Class: SS3</p>
+      <header className="bg-primary text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 sticky top-0 z-20">
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-3">
+            <img src={LOGO_BASE64} alt="Logo" className="w-10 h-10 bg-white rounded-full p-1 shrink-0" />
+            <div>
+              <h1 className="font-bold text-base sm:text-lg leading-tight">CBT EXAMINATION</h1>
+              <p className="text-[10px] sm:text-xs text-blue-200">Class: SS3</p>
+            </div>
+          </div>
+          {/* Mobile timer */}
+          <div className={`flex sm:hidden items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-base ${timeLeft < 300 ? 'bg-red-600 animate-pulse' : 'bg-blue-900'}`}>
+            <Timer className="w-4 h-4" />
+            {formatTime(timeLeft)}
           </div>
         </div>
 
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xl ${timeLeft < 300 ? 'bg-red-600 animate-pulse' : 'bg-blue-900'}`}>
+        {/* Desktop timer */}
+        <div className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xl ${timeLeft < 300 ? 'bg-red-600 animate-pulse' : 'bg-blue-900'}`}>
           <Timer className="w-5 h-5" />
           {formatTime(timeLeft)}
         </div>
 
-        <Button variant="destructive" onClick={handleSubmit} disabled={isSubmitted}>
+        <Button variant="destructive" onClick={handleSubmit} disabled={isSubmitted} className="w-full sm:w-auto font-bold uppercase tracking-widest text-xs py-2.5 h-auto">
           SUBMIT EXAM
         </Button>
       </header>
 
       {/* Subject Tabs */}
-      <div className="bg-white border-b shadow-sm sticky top-[72px] z-10">
+      <div className="bg-white border-b shadow-sm relative sm:sticky sm:top-[72px] z-10">
         <div className="max-w-7xl mx-auto flex overflow-x-auto hide-scrollbar">
           {subjects.map(subject => {
             const subjectQuestions = questions.filter(q => q.subject === subject);

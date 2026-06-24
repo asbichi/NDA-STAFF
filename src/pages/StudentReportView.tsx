@@ -274,14 +274,15 @@ export default function StudentReportView() {
         <AnimatePresence mode="wait">
           {viewMode === 'print' ? (
             /* Standard A4 Print View (On-screen) */
-            <motion.div 
-              key="print-view"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mx-auto bg-white shadow-2xl flex flex-col p-12 border-[12px] border-double relative overflow-hidden print:shadow-none print:border-none print:p-0" 
-              style={{ borderColor: '#2563eb', width: '210mm', height: '296mm', boxSizing: 'border-box', pageBreakInside: 'avoid' }}
-            >
+            <div className="w-full overflow-x-auto pb-6 custom-scrollbar flex justify-start lg:justify-center">
+              <motion.div 
+                key="print-view"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mx-auto bg-white shadow-2xl flex flex-col p-12 border-[12px] border-double relative overflow-hidden print:shadow-none print:border-none print:p-0 shrink-0" 
+                style={{ borderColor: '#2563eb', width: '210mm', height: '296mm', boxSizing: 'border-box', pageBreakInside: 'avoid' }}
+              >
               {/* Watermark */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
                 <img src={LOGO_BASE64} alt="" className="w-[600px] h-[600px] object-contain grayscale"  />
@@ -414,6 +415,7 @@ export default function StudentReportView() {
                 </div>
               </div>
             </motion.div>
+          </div>
           ) : (
             /* Custom Responsive Phone View (Rendered inside smartphone preview on desktop, and full screen on mobile) */
             <motion.div 
