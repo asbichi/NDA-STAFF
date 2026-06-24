@@ -5,7 +5,7 @@ import {
   CreditCard, FileSpreadsheet, Calendar, BarChart3, 
   UserCircle, FileText, MonitorPlay, Settings, LogOut,
   Menu, Printer, FileEdit, Bell, Search, ChevronRight, Database,
-  UserPlus, Check, Trash2, Inbox
+  UserPlus, Check, Trash2, Inbox, ChevronDown, ChevronUp, LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -66,6 +66,8 @@ export default function AdminLayout() {
   const [activeTab, setActiveTab] = useState<'all' | 'registration' | 'fee'>('all');
   const [firestoreStudents, setFirestoreStudents] = useState<any[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isNavDropdownOpen, setIsNavDropdownOpen] = useState(false);
+  const navDropdownRef = useRef<HTMLDivElement>(null);
 
   // Persistence for read notifications
   const [readIds, setReadIds] = useState<string[]>(() => {
@@ -89,11 +91,14 @@ export default function AdminLayout() {
     localStorage.setItem('admin_dismissed_notifications', JSON.stringify(dismissedIds));
   }, [dismissedIds]);
 
-  // Click outside to close notification dropdown
+  // Click outside to close notification or quick nav dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+      }
+      if (navDropdownRef.current && !navDropdownRef.current.contains(event.target as Node)) {
+        setIsNavDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -342,6 +347,74 @@ export default function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-6">
+            {/* Quick Navigation Dropdown for Phone/Tablet View */}
+            <div className="relative lg:hidden" ref={navDropdownRef}>
+              <button 
+                onClick={() => setIsNavDropdownOpen(!isNavDropdownOpen)}
+                className={`relative flex items-center gap-1 p-2 rounded-none transition-all duration-300 focus:outline-none ${isNavDropdownOpen ? 'text-primary bg-slate-50' : 'text-slate-400 hover:text-primary hover:bg-slate-50'}`}
+                title="Quick Navigation"
+              >
+                <LayoutGrid className="w-5 h-5" />
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Nav</span>
+                {isNavDropdownOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+
+              <AnimatePresence>
+                {isNavDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 mt-3 w-[calc(100vw-3rem)] xs:w-[320px] sm:w-[380px] bg-white border border-slate-100 shadow-2xl z-50 rounded-none overflow-hidden"
+                  >
+                    {/* Dropdown Header */}
+                    <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                      <div className="flex items-center gap-2">
+                        <LayoutGrid className="w-4 h-4 text-accent" />
+                        <span className="font-serif font-black text-[11px] uppercase tracking-wider text-primary">Portal Navigation</span>
+                      </div>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-1.5 py-0.5">
+                        Quick Access
+                      </span>
+                    </div>
+
+                    {/* Navigation Icons Grid */}
+                    <div className="p-3 bg-white grid grid-cols-3 gap-2 max-h-[360px] overflow-y-auto custom-scrollbar">
+                      {sidebarGroups.flatMap(group => group.links).map((link) => {
+                        const Icon = link.icon;
+                        const isActive = location.pathname === link.path;
+                        return (
+                          <Link
+                            key={link.path}
+                            to={link.path}
+                            onClick={() => setIsNavDropdownOpen(false)}
+                            className={`flex flex-col items-center justify-center p-3 border rounded-none transition-all duration-300 group ${
+                              isActive 
+                                ? 'bg-primary border-primary text-white shadow-md' 
+                                : 'bg-slate-50/50 border-slate-100 text-slate-600 hover:bg-slate-50 hover:border-slate-200 hover:text-primary'
+                            }`}
+                          >
+                            <Icon className={`w-5 h-5 mb-2 transition-transform duration-300 ${isActive ? 'scale-110 text-accent' : 'text-slate-400 group-hover:scale-110 group-hover:text-primary'}`} />
+                            <span className={`text-[8px] font-bold uppercase tracking-wider text-center line-clamp-1 w-full ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-primary'}`}>
+                              {link.name}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+
+                    {/* Dropdown Footer */}
+                    <div className="px-5 py-2.5 bg-slate-50 border-t border-slate-100 text-center">
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                        NDA Staff Secondary School
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             {/* Notification Center Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button 
