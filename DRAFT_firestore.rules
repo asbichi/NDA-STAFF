@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} { 
+      allow read, write: if false; 
+    }
+
+    // Auth Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "abdullahibichishuaib.ABS@gmail.com" ||
+        request.auth.token.email == "admin@NDA.academy" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Helpers
+    function isValidStudent(data) {
+      return data.keys().hasAll(['name', 'admissionNo', 'class', 'arm', 'gender']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.admissionNo is string && data.admissionNo.size() <= 50 &&
+             data.class is string && data.class.size() <= 50 &&
+             data.arm is string && data.arm.size() <= 10 &&
+             data.gender is string && data.gender.size() <= 20;
+    }
+    
+    function isValidQuestion(data) {
+      return data.keys().hasAll(['subject', 'class', 'text', 'options', 'correctAnswer']) &&
+             data.subject is string && data.subject.size() <= 100 &&
+             data.class is string && data.class.size() <= 50 &&
+             data.text is string && data.text.size() <= 2000 &&
+             data.options is map && data.options.keys().hasAll(['A', 'B', 'C', 'D']) &&
+             data.options.A is string && data.options.A.size() <= 500 &&
+             data.options.B is string && data.options.B.size() <= 500 &&
+             data.options.C is string && data.options.C.size() <= 500 &&
+             data.options.D is string && data.options.D.size() <= 500 &&
+             data.correctAnswer is string && data.correctAnswer.size() <= 1;
+    }
+    
+    function isValidScore(data) {
+      return data.keys().hasAll(['studentId', 'studentName', 'admissionNo', 'session', 'term', 'class', 'arm', 'subject', 'ca', 'exam', 'total', 'grade']) &&
+             data.studentId is string && data.studentId.size() <= 100 &&
+             data.studentName is string && data.studentName.size() <= 200 &&
+             data.admissionNo is string && data.admissionNo.size() <= 50 &&
+             data.session is string && data.session.size() <= 20 &&
+             data.term is string && data.term.size() <= 20 &&
+             data.class is string && data.class.size() <= 50 &&
+             data.arm is string && data.arm.size() <= 10 &&
+             data.subject is string && data.subject.size() <= 100 &&
+             data.ca is number && data.ca >= 0 && data.ca <= 40 &&
+             data.exam is number && data.exam >= 0 && data.exam <= 60 &&
+             data.total is number && data.total == (data.ca + data.exam) &&
+             data.grade is string && data.grade.size() <= 2;
+    }
+    
+    function isValidCBTResult(data) {
+      return data.keys().hasAll(['studentId', 'studentName', 'class', 'score', 'total', 'percentage', 'date']) &&
+             data.size() == 7 &&
+             data.studentId is string && data.studentId.size() <= 100 &&
+             data.studentName is string && data.studentName.size() <= 200 &&
+             data.class is string && data.class.size() <= 50 &&
+             data.score is number && data.score >= 0 &&
+             data.total is number && data.total > 0 &&
+             data.percentage is number && data.percentage >= 0 && data.percentage <= 100 &&
+             data.date == request.time;
+    }
+
+    // Collections
+    match /students/{studentId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin() && isValidStudent(incoming());
+      allow update: if isAdmin() && isValidStudent(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /questions/{questionId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin() && isValidQuestion(incoming());
+      allow update: if isAdmin() && isValidQuestion(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /scores/{scoreId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin() && isValidScore(incoming());
+      allow update: if isAdmin() && isValidScore(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /cbt_results/{resultId} {
+      allow create: if isValidCBTResult(incoming());
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}
