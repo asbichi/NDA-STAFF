@@ -4,7 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Printer, Download, Loader2, 
   Award, User, Calendar, BookOpen, ShieldCheck,
-  Smartphone, FileText, CheckCircle2, ChevronRight, Sparkles, BookCheck, ClipboardList
+  Smartphone, FileText, CheckCircle2, ChevronRight, Sparkles, BookCheck, ClipboardList,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +46,7 @@ export default function StudentReportView() {
   const [reportData, setReportData] = useState<StudentReportData | null>(null);
   const [student, setStudent] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'print' | 'phone'>('print');
+  const [expandedSubjects, setExpandedSubjects] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const savedStudent = localStorage.getItem('student_session');
@@ -485,44 +487,86 @@ export default function StudentReportView() {
                   <div className="px-4 mt-6 space-y-4">
                     <div className="flex items-center justify-between px-1">
                       <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Subject Breakdown</h4>
-                      <span className="text-[9px] font-black text-primary uppercase tracking-widest">{reportData.subjects.length} Subjects</span>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            const allExpanded = Object.keys(expandedSubjects).length === reportData.subjects.length;
+                            if (allExpanded) {
+                              setExpandedSubjects({});
+                            } else {
+                              const next: Record<number, boolean> = {};
+                              reportData.subjects.forEach((_, i) => { next[i] = true; });
+                              setExpandedSubjects(next);
+                            }
+                          }}
+                          className="h-6 text-[8px] font-black uppercase tracking-widest text-primary p-1 bg-slate-100 hover:bg-slate-200"
+                        >
+                          {Object.keys(expandedSubjects).length === reportData.subjects.length ? "Collapse All" : "Expand All"}
+                        </Button>
+                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">{reportData.subjects.length} Subjects</span>
+                      </div>
                     </div>
 
                     <div className="space-y-3">
-                      {reportData.subjects.map((sub, idx) => (
-                        <div key={idx} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                          <div className="flex items-center justify-between mb-3 border-b border-slate-50 pb-2">
-                            <span className="text-xs font-bold text-primary uppercase tracking-wider">{sub.name}</span>
-                            <span className={`inline-flex items-center justify-center w-6 h-6 font-serif font-bold text-[10px] rounded-full border ${
-                              sub.grade === 'A' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                              sub.grade === 'B' ? 'bg-blue-50 border-blue-200 text-blue-700' :
-                              sub.grade === 'C' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'
-                            }`}>
-                              {sub.grade}
-                            </span>
-                          </div>
+                      {reportData.subjects.map((sub, idx) => {
+                        const isExpanded = !!expandedSubjects[idx];
+                        return (
+                          <div key={idx} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div 
+                              onClick={() => setExpandedSubjects(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                              className="flex items-center justify-between cursor-pointer select-none"
+                            >
+                              <div className="flex items-center gap-2">
+                                {isExpanded ? <ChevronUp className="w-4 h-4 text-primary shrink-0" /> : <ChevronDown className="w-4 h-4 text-primary shrink-0" />}
+                                <span className="text-xs font-bold text-primary uppercase tracking-wider">{sub.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-flex items-center justify-center w-6 h-6 font-serif font-bold text-[10px] rounded-full border ${
+                                  sub.grade === 'A' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                  sub.grade === 'B' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                                  sub.grade === 'C' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'
+                                }`}>
+                                  {sub.grade}
+                                </span>
+                              </div>
+                            </div>
 
-                          <div className="grid grid-cols-3 gap-2 text-center text-[10px] uppercase font-bold mb-3">
-                            <div className="p-1.5 bg-slate-50 rounded-lg">
-                              <span className="text-[8px] text-slate-400 block mb-0.5">CA (40)</span>
-                              <span className="text-slate-700">{sub.ca}</span>
-                            </div>
-                            <div className="p-1.5 bg-slate-50 rounded-lg">
-                              <span className="text-[8px] text-slate-400 block mb-0.5">Exam (60)</span>
-                              <span className="text-slate-700">{sub.exam}</span>
-                            </div>
-                            <div className="p-1.5 bg-blue-50 border border-blue-100 rounded-lg">
-                              <span className="text-[8px] text-blue-400 block mb-0.5">Total (100)</span>
-                              <span className="text-primary font-extrabold">{sub.total}</span>
-                            </div>
-                          </div>
+                            <AnimatePresence initial={false}>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="overflow-hidden mt-3 pt-3 border-t border-slate-50"
+                                >
+                                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] uppercase font-bold mb-3">
+                                    <div className="p-1.5 bg-slate-50 rounded-lg">
+                                      <span className="text-[8px] text-slate-400 block mb-0.5">CA (40)</span>
+                                      <span className="text-slate-700">{sub.ca}</span>
+                                    </div>
+                                    <div className="p-1.5 bg-slate-50 rounded-lg">
+                                      <span className="text-[8px] text-slate-400 block mb-0.5">Exam (60)</span>
+                                      <span className="text-slate-700">{sub.exam}</span>
+                                    </div>
+                                    <div className="p-1.5 bg-blue-50 border border-blue-100 rounded-lg">
+                                      <span className="text-[8px] text-blue-400 block mb-0.5">Total (100)</span>
+                                      <span className="text-primary font-extrabold">{sub.total}</span>
+                                    </div>
+                                  </div>
 
-                          <div className="text-[10px] italic text-slate-400 flex items-center justify-between">
-                            <span>Remarks:</span>
-                            <span className="font-bold text-slate-600 not-italic uppercase tracking-widest text-[8px]">{sub.remark}</span>
+                                  <div className="text-[10px] italic text-slate-400 flex items-center justify-between">
+                                    <span>Remarks:</span>
+                                    <span className="font-bold text-slate-600 not-italic uppercase tracking-widest text-[8px]">{sub.remark}</span>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 

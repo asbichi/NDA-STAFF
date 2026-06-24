@@ -1,6 +1,6 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
 import React, { useState, useRef, useEffect } from 'react';
-import { Printer, FileText, Download, Upload, Loader2, Award, User, Calendar, BookOpen, TrendingUp, ShieldCheck, Filter, GraduationCap, Smartphone } from 'lucide-react';
+import { Printer, FileText, Download, Upload, Loader2, Award, User, Calendar, BookOpen, TrendingUp, ShieldCheck, Filter, GraduationCap, Smartphone, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -282,6 +282,7 @@ SingleReport.displayName = 'SingleReport';
 const SingleReportPhone = ({ data }: { data: StudentReportData }) => {
   const totalScore = data.subjects.reduce((sum, sub) => sum + sub.total, 0);
   const avgScore = (totalScore / (data.subjects.length || 1)).toFixed(1);
+  const [expandedSubjects, setExpandedSubjects] = useState<Record<number, boolean>>({});
 
   return (
     <div className="w-full max-w-md mx-auto bg-slate-50 min-h-[600px] flex flex-col pb-6 rounded-2xl overflow-hidden shadow-md border border-slate-200">
@@ -338,44 +339,84 @@ const SingleReportPhone = ({ data }: { data: StudentReportData }) => {
       <div className="px-3 mt-4 space-y-3">
         <div className="flex items-center justify-between px-1">
           <h4 className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400">Subject Breakdown</h4>
-          <span className="text-[8px] font-black text-primary uppercase tracking-widest">{data.subjects.length} Subjects</span>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                const allExpanded = Object.keys(expandedSubjects).length === data.subjects.length;
+                if (allExpanded) {
+                  setExpandedSubjects({});
+                } else {
+                  const next: Record<number, boolean> = {};
+                  data.subjects.forEach((_, i) => { next[i] = true; });
+                  setExpandedSubjects(next);
+                }
+              }}
+              className="h-5 text-[7px] font-black uppercase tracking-widest text-primary p-0.5 bg-slate-100 hover:bg-slate-200"
+            >
+              {Object.keys(expandedSubjects).length === data.subjects.length ? "Collapse All" : "Expand All"}
+            </Button>
+            <span className="text-[8px] font-black text-primary uppercase tracking-widest">{data.subjects.length} Subjects</span>
+          </div>
         </div>
 
         <div className="space-y-2">
-          {data.subjects.map((sub, idx) => (
-            <div key={idx} className="bg-white border border-slate-100 rounded-lg p-3 shadow-xs">
-              <div className="flex items-center justify-between mb-2 border-b border-slate-50 pb-1.5">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{sub.name}</span>
-                <span className={`inline-flex items-center justify-center w-5 h-5 font-serif font-bold text-[9px] rounded-full border ${
-                  sub.grade === 'A' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                  sub.grade === 'B' ? 'bg-blue-50 border-blue-100 text-blue-700' :
-                  sub.grade === 'C' ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-red-50 border-red-100 text-red-700'
-                }`}>
-                  {sub.grade}
-                </span>
-              </div>
+          {data.subjects.map((sub, idx) => {
+            const isExpanded = !!expandedSubjects[idx];
+            return (
+              <div key={idx} className="bg-white border border-slate-100 rounded-lg p-3 shadow-xs">
+                <div 
+                  onClick={() => setExpandedSubjects(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                  className="flex items-center justify-between cursor-pointer select-none"
+                >
+                  <div className="flex items-center gap-2">
+                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-primary shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{sub.name}</span>
+                  </div>
+                  <span className={`inline-flex items-center justify-center w-5 h-5 font-serif font-bold text-[9px] rounded-full border ${
+                    sub.grade === 'A' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                    sub.grade === 'B' ? 'bg-blue-50 border-blue-100 text-blue-700' :
+                    sub.grade === 'C' ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-red-50 border-red-100 text-red-700'
+                  }`}>
+                    {sub.grade}
+                  </span>
+                </div>
 
-              <div className="grid grid-cols-3 gap-1.5 text-center text-[9px] uppercase font-bold mb-2">
-                <div className="p-1 bg-slate-50 rounded">
-                  <span className="text-[7px] text-slate-400 block">CA</span>
-                  <span className="text-slate-700">{sub.ca}</span>
-                </div>
-                <div className="p-1 bg-slate-50 rounded">
-                  <span className="text-[7px] text-slate-400 block">Exam</span>
-                  <span className="text-slate-700">{sub.exam}</span>
-                </div>
-                <div className="p-1 bg-blue-50 border border-blue-100 rounded">
-                  <span className="text-[7px] text-blue-400 block">Total</span>
-                  <span className="text-primary font-black">{sub.total}</span>
-                </div>
-              </div>
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="overflow-hidden mt-2 pt-2 border-t border-slate-50"
+                    >
+                      <div className="grid grid-cols-3 gap-1.5 text-center text-[9px] uppercase font-bold mb-2">
+                        <div className="p-1 bg-slate-50 rounded">
+                          <span className="text-[7px] text-slate-400 block">CA</span>
+                          <span className="text-slate-700">{sub.ca}</span>
+                        </div>
+                        <div className="p-1 bg-slate-50 rounded">
+                          <span className="text-[7px] text-slate-400 block">Exam</span>
+                          <span className="text-slate-700">{sub.exam}</span>
+                        </div>
+                        <div className="p-1 bg-blue-50 border border-blue-100 rounded">
+                          <span className="text-[7px] text-blue-400 block">Total</span>
+                          <span className="text-primary font-black">{sub.total}</span>
+                        </div>
+                      </div>
 
-              <div className="text-[9px] italic text-slate-400 flex items-center justify-between">
-                <span>Remarks:</span>
-                <span className="font-bold text-slate-600 not-italic uppercase tracking-widest text-[7px]">{sub.remark}</span>
+                      <div className="text-[9px] italic text-slate-400 flex items-center justify-between">
+                        <span>Remarks:</span>
+                        <span className="font-bold text-slate-600 not-italic uppercase tracking-widest text-[7px]">{sub.remark}</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -408,6 +449,7 @@ export default function ReportSheet() {
   const [isBulkMode, setIsBulkMode] = useState(false);
   const [studentReports, setStudentReports] = useState<StudentReportData[]>([]);
   const [viewMode, setViewMode] = useState<'print' | 'phone'>('print');
+  const [isParamsCollapsed, setIsParamsCollapsed] = useState(window.innerWidth < 768);
   
   const location = useLocation();
   const reportRef = useRef<HTMLDivElement>(null);
@@ -833,13 +875,39 @@ export default function ReportSheet() {
       </div>
 
       <Card className="print:hidden border-slate-100 shadow-sm rounded-none">
-        <CardHeader className="border-b border-slate-50">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-accent" />
-            <CardTitle className="text-[12px] font-bold uppercase tracking-[0.2em] text-primary">Report Parameters</CardTitle>
+        <CardHeader 
+          className="border-b border-slate-50 cursor-pointer select-none md:cursor-default"
+          onClick={() => {
+            if (window.innerWidth < 768) {
+              setIsParamsCollapsed(!isParamsCollapsed);
+            }
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-accent" />
+              <CardTitle className="text-[12px] font-bold uppercase tracking-[0.2em] text-primary">Report Parameters</CardTitle>
+            </div>
+            <div className="md:hidden flex items-center gap-1">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                {isParamsCollapsed ? "Show Filters" : "Hide Filters"}
+              </span>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-500">
+                {isParamsCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="p-8">
+        <AnimatePresence initial={false}>
+          {(!isParamsCollapsed || window.innerWidth >= 768) && (
+            <motion.div
+              initial={window.innerWidth < 768 ? { height: 0, opacity: 0 } : false}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <CardContent className="p-8">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Session</Label>
@@ -980,6 +1048,9 @@ export default function ReportSheet() {
             </AnimatePresence>
           </div>
         </CardContent>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
 
       {showReport && (
