@@ -26,7 +26,18 @@ import { toast } from 'sonner';
 import { db } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiClient: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!aiClient) {
+    const key = process.env.GEMINI_API_KEY || '';
+    if (!key) {
+      throw new Error('GEMINI_API_KEY environment variable is required to use AI features.');
+    }
+    aiClient = new GoogleGenAI({ apiKey: key });
+  }
+  return aiClient;
+}
 
 const SUBJECT_CATEGORIES = {
   sss_science: ['Mathematics', 'English Language', 'Civic Education', 'Biology', 'Physics', 'Chemistry', 'Economics', 'Further Mathematics', 'Geography', 'Computer Science', 'Agricultural Science', 'Data Processing', 'Technical Drawing'],
@@ -79,7 +90,7 @@ export default function AdminCBT() {
   const handleGenerateAI = async () => {
     setIsGenerating(true);
     try {
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: "gemini-3-flash-preview",
         contents: "Generate 10 high-quality multiple-choice questions strictly adhering to the WAEC, NECO, and JAMB standards for Senior Secondary School (SS1 - SS3) students in Nigeria. Include subjects from Science, Art, and Commerce fields (e.g., Physics, Chemistry, Government, Financial Accounting, Literature, Economics). Return exactly 10 questions. Ensure options are plausible and the difficulty matches standard WAEC/JAMB past questions. For the 'class' field, use values like 'SSS 1 Science', 'SSS 2 Art', 'SSS 3 Commerce'.",
         config: {
