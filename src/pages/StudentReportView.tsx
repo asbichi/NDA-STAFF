@@ -229,7 +229,7 @@ export default function StudentReportView() {
         {/* View Mode Switcher and Actions */}
         <div className="flex flex-wrap items-center gap-4">
           {/* Switcher */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-none border border-slate-200">
+          <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-none border border-slate-200">
             <Button 
               variant="ghost" 
               size="sm"
@@ -256,6 +256,24 @@ export default function StudentReportView() {
               <Smartphone className="w-3.5 h-3.5" />
               📱 Phone View
             </Button>
+          </div>
+
+          {/* Mobile view dropdown switcher */}
+          <div className="sm:hidden relative inline-block text-left w-full max-w-[200px]">
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as 'print' | 'phone')}
+              className="w-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest h-9 px-3 rounded-none appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary pr-8"
+              style={{
+                backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 10px center',
+                backgroundSize: '12px'
+              }}
+            >
+              <option value="print">📄 A4 Print View</option>
+              <option value="phone">📱 Phone View</option>
+            </select>
           </div>
 
           <div className="flex gap-2">

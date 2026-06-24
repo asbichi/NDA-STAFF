@@ -170,7 +170,7 @@ export default function Hero() {
             <div className="flex items-center gap-4">
               <img src={LOGO_BASE64} alt="NDA Logo" className="w-12 h-12 object-contain"  />
               <div className="flex flex-col">
-                <span className="font-serif font-bold text-2xl tracking-tight">NDA STAFF SECONDARY SCHOOL</span>
+                <span className="font-serif font-bold text-[11px] tracking-tight">NDA STAFF SECONDARY SCHOOL</span>
                 <span className="text-[9px] font-bold tracking-[0.3em] text-red-500 uppercase mt-1">Global Academy</span>
               </div>
             </div>
