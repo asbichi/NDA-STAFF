@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Link } from 'react-router-dom';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, getDocs, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export interface GalleryMember {
@@ -22,10 +22,10 @@ export interface GalleryMember {
 
 const SEED_MEMBERS = [
   {
-    name: 'Brigadier General A. B. Muhammed',
+    name: 'Major General Oluyemi Olatoye',
     title: 'Commandant',
     role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
     description: 'Providing strategic leadership and ensuring high standards of discipline and educational excellence at the NDA Staff Secondary School.',
     order: 1
   },
@@ -42,7 +42,7 @@ const SEED_MEMBERS = [
     title: 'Vice Principal Academic',
     role: 'management' as const,
     imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-    description: 'Overseeing curriculum planning, class scheduling, examinations, and supervising the implementation of academic programs.',
+    description: 'Dedicated to fostering academic excellence, innovation in curriculum delivery, and ensuring a robust learning environment where every student can achieve their highest potential.',
     order: 3
   },
   {
@@ -71,10 +71,10 @@ const SEED_MEMBERS = [
   },
   {
     name: 'Mr. Charles Nwosu',
-    title: 'PTA Secretary',
+    title: 'General Secretary PTA',
     role: 'pta' as const,
     imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop',
-    description: 'Managing correspondence, documenting meetings, and ensuring clear communication flow regarding all PTA resolutions.',
+    description: 'A pivotal link between the parent body and the school management, driving clear communication and successfully organizing initiatives that strengthen the school community.',
     order: 7
   },
   {
@@ -103,27 +103,38 @@ export default function Gallery() {
         const q = query(colRef, orderBy('order', 'asc'));
         const snapshot = await getDocs(q);
 
-        if (snapshot.empty) {
-          // Auto-seed
-          const seededList: GalleryMember[] = [];
-          for (const item of SEED_MEMBERS) {
-            const docRef = await addDoc(colRef, {
-              ...item,
-              createdAt: serverTimestamp()
-            });
-            seededList.push({
-              id: docRef.id,
-              ...item
-            });
-          }
-          setMembers(seededList);
-        } else {
-          const list = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as GalleryMember[];
-          setMembers(list);
+        let list = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as GalleryMember[];
+
+        // Check if Commandant is in the list
+        const commandantExists = list.some(m => m.title.toLowerCase().includes('commandant'));
+
+        if (!commandantExists) {
+          // Add missing Commandant
+          const commandantItem = {
+            name: 'Major General Oluyemi Olatoye',
+            title: 'Commandant',
+            role: 'management' as const,
+            imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
+            description: 'Providing strategic leadership and ensuring high standards of discipline and educational excellence at the NDA Staff Secondary School.',
+            order: 1
+          };
+          const docRef = await addDoc(colRef, { ...commandantItem, createdAt: serverTimestamp() });
+          list = [{ id: docRef.id, ...commandantItem }, ...list];
         }
+
+        // If collection was empty initially (and no SEED_MEMBERS were in DB), add others
+        if (snapshot.empty) {
+            // Need to add others too
+            for (const item of SEED_MEMBERS.filter(m => !m.title.toLowerCase().includes('commandant'))) {
+                const docRef = await addDoc(colRef, { ...item, createdAt: serverTimestamp() });
+                list.push({ id: docRef.id, ...item });
+            }
+        }
+
+        setMembers(list);
       } catch (err) {
         console.error("Error fetching gallery members:", err);
       } finally {
@@ -345,8 +356,9 @@ export default function Gallery() {
                       <img 
                         src={member.imageUrl} 
                         alt={member.name} 
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                        className="object-cover object-top w-full h-full group-hover:scale-105 transition-transform duration-500"
                         referrerPolicy="no-referrer"
+                        onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop'; }}
                       />
                       {/* Dark overlay with hover view button */}
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -401,8 +413,9 @@ export default function Gallery() {
                 <img 
                   src={selectedMember.imageUrl} 
                   alt={selectedMember.name} 
-                  className="object-cover w-full h-full"
+                  className="object-cover object-top w-full h-full"
                   referrerPolicy="no-referrer"
+                  onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop'; }}
                 />
                 <div className="absolute top-4 left-4">
                   <Badge className={selectedMember.role === 'management' ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'}>
