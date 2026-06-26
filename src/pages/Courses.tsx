@@ -1,5 +1,5 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
-import { Book, Microscope, Calculator, Globe, Palette, Music, Cpu, Languages, Briefcase, Landmark, PenTool, ChevronDown, ChevronUp, GraduationCap, User, Home, Mail, Info } from 'lucide-react';
+import { Book, Microscope, Calculator, Globe, Palette, Music, Cpu, Languages, Briefcase, Landmark, PenTool, ChevronDown, ChevronUp, GraduationCap, User, Home, Mail, Info, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +67,8 @@ export default function Courses() {
         <div className="flex items-center gap-4 text-sm font-medium">
           <Link to="/" className="hover:text-blue-300 transition-colors hidden md:block">HOME</Link>
           <Link to="/about" className="hover:text-blue-300 transition-colors hidden md:block">ABOUT</Link>
+          <Link to="/courses" className="text-blue-300 border-b-2 border-blue-300 pb-1 hover:text-blue-400 transition-colors hidden md:block font-bold">ACADEMICS</Link>
+          <Link to="/gallery" className="hover:text-blue-300 transition-colors hidden md:block">GALLERY</Link>
           <Link to="/contact" className="hover:text-blue-300 transition-colors hidden md:block">CONTACT</Link>
           
           {/* Desktop Login Buttons */}
@@ -115,6 +117,14 @@ export default function Courses() {
                     >
                       <Info className="w-4 h-4 text-slate-400" />
                       About Us
+                    </Link>
+                    <Link 
+                      to="/gallery"
+                      onClick={() => setIsLoginDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 border-t border-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      <LayoutGrid className="w-4 h-4 text-slate-400" />
+                      Gallery
                     </Link>
                     <Link 
                       to="/contact"

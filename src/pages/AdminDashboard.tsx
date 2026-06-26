@@ -68,19 +68,18 @@ export default function AdminDashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSync = async () => {
-    if (confirm("This will synchronize the database with required student and score records for all classes to ensure reports generate correctly. Proceed?")) {
-      setIsSyncing(true);
-      try {
-        await seedDatabase((msg) => {
-          console.log(msg);
-        });
-        toast.success("Database synchronization complete!");
-      } catch (err) {
-        console.error(err);
-        toast.error("Synchronization failed.");
-      } finally {
-        setIsSyncing(false);
-      }
+    setIsSyncing(true);
+    toast.info("Starting database synchronization...");
+    try {
+      await seedDatabase((msg) => {
+        console.log(msg);
+      });
+      toast.success("Database synchronization complete!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Synchronization failed: ${err.message || "Unknown error"}`);
+    } finally {
+      setIsSyncing(false);
     }
   };
 

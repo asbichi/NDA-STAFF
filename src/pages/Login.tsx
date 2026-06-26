@@ -1,7 +1,7 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Lock, User, ArrowLeft, GraduationCap, ShieldCheck, Loader2 } from 'lucide-react';
+import { Lock, User, ArrowLeft, GraduationCap, ShieldCheck, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,18 +42,20 @@ export default function Login() {
   const [studentClass, setStudentClass] = useState('');
   const [subject, setSubject] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
   
   const navigate = useNavigate();
 
   const [adminEmail, setAdminEmail] = useState('admin@NDA.academy');
   const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Prioritize demo bypass to avoid Firebase delays if unwanted
-    if (adminEmail === 'admin@NDA.academy' && adminPassword === 'Bichi123') {
+
+    // Bypass Firebase auth for demo mode
+    if (adminEmail.trim() === 'admin@NDA.academy' && adminPassword.trim() === 'Bichi123') {
       toast.success('Admin login successful (Demo Mode)!');
       navigate('/admin');
       setIsLoading(false);
@@ -61,8 +63,23 @@ export default function Login() {
     }
 
     try {
-      const { signInWithEmailAndPassword } = await import('firebase/auth');
-      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+      const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import('firebase/auth');
+      try {
+        await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+      } catch (err: any) {
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          try {
+            await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
+          } catch (createErr: any) {
+            if (createErr.code === 'auth/email-already-in-use') {
+              throw err;
+            }
+            throw createErr;
+          }
+        } else {
+          throw err;
+        }
+      }
       toast.success('Admin login successful!');
       navigate('/admin');
     } catch (error: any) {
@@ -190,13 +207,20 @@ export default function Login() {
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                       <Input 
                         id="regNo" 
-                        type="password"
+                        type={showStudentPassword ? "text" : "password"}
                         placeholder="Enter Reg Number as Password" 
-                        className="pl-10 rounded-none border-slate-200 focus-visible:ring-primary"
+                        className="pl-10 pr-10 rounded-none border-slate-200 focus-visible:ring-primary"
                         value={regNo}
                         onChange={(e) => setRegNo(e.target.value)}
                         required
                       />
+                      <button 
+                        type="button" 
+                        onClick={() => setShowStudentPassword(!showStudentPassword)}
+                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                      >
+                        {showStudentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -292,13 +316,20 @@ export default function Login() {
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                       <Input 
                         id="adminPassword" 
-                        type="password"
+                        type={showAdminPassword ? "text" : "password"}
                         placeholder="Enter password" 
-                        className="pl-10 rounded-none border-slate-200 focus-visible:ring-primary"
+                        className="pl-10 pr-10 rounded-none border-slate-200 focus-visible:ring-primary"
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
                         required
                       />
+                      <button 
+                        type="button" 
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                      >
+                        {showAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
                 </CardContent>

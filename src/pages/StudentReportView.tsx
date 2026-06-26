@@ -39,6 +39,111 @@ interface StudentReportData {
   principalComment: string;
 }
 
+function oklabToRgb(L: number, a: number, b: number, alpha: number): string {
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  
+  const l3 = l_ * l_ * l_;
+  const m3 = m_ * m_ * m_;
+  const s3 = s_ * s_ * s_;
+  
+  const r = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+  const g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+  const b_ = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+  
+  const toSRGB = (c: number) => {
+    if (c <= 0.0031308) return 12.92 * c;
+    return 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  };
+  
+  const sR = Math.max(0, Math.min(255, Math.round(toSRGB(r) * 255)));
+  const sG = Math.max(0, Math.min(255, Math.round(toSRGB(g) * 255)));
+  const sB = Math.max(0, Math.min(255, Math.round(toSRGB(b_) * 255)));
+  
+  if (alpha === 1) {
+    return `rgb(${sR}, ${sG}, ${sB})`;
+  } else {
+    return `rgba(${sR}, ${sG}, ${sB}, ${alpha})`;
+  }
+}
+
+function convertModernColors(str: any): any {
+  if (typeof str !== 'string') return str;
+  if (!str.includes('oklch') && !str.includes('oklab')) return str;
+  
+  let result = str.replace(/oklch\(([^)]+)\)/gi, (match, content) => {
+    try {
+      const parts = content.trim().split(/[\s,+/]+/);
+      if (parts.length < 3) return 'rgb(0,0,0)';
+      
+      let L = parseFloat(parts[0]);
+      if (isNaN(L)) L = 0;
+      if (parts[0] && parts[0].includes('%')) L = L / 100;
+      
+      let C = parseFloat(parts[1]);
+      if (isNaN(C)) C = 0;
+      if (parts[1] && parts[1].includes('%')) C = C / 100;
+      
+      let H = parseFloat(parts[2]);
+      if (isNaN(H)) H = 0;
+      if (parts[2]) {
+        if (parts[2].includes('deg')) H = parseFloat(parts[2].replace('deg', ''));
+        if (parts[2].includes('rad')) H = parseFloat(parts[2].replace('rad', '')) * (180 / Math.PI);
+        if (parts[2].includes('turn')) H = parseFloat(parts[2].replace('turn', '')) * 360;
+      }
+      if (isNaN(H)) H = 0;
+      
+      let alpha = 1;
+      if (parts[3]) {
+        alpha = parseFloat(parts[3]);
+        if (parts[3].includes('%')) alpha = alpha / 100;
+      }
+      if (isNaN(alpha)) alpha = 1;
+      
+      const hRad = H * Math.PI / 180;
+      const a = C * Math.cos(hRad);
+      const b = C * Math.sin(hRad);
+      
+      return oklabToRgb(L, a, b, alpha);
+    } catch (e) {
+      return 'rgb(0,0,0)';
+    }
+  });
+
+  result = result.replace(/oklab\(([^)]+)\)/gi, (match, content) => {
+    try {
+      const parts = content.trim().split(/[\s,+/]+/);
+      if (parts.length < 3) return 'rgb(0,0,0)';
+      
+      let L = parseFloat(parts[0]);
+      if (isNaN(L)) L = 0;
+      if (parts[0] && parts[0].includes('%')) L = L / 100;
+      
+      let a = parseFloat(parts[1]);
+      if (isNaN(a)) a = 0;
+      if (parts[1] && parts[1].includes('%')) a = a / 100;
+      
+      let b = parseFloat(parts[2]);
+      if (isNaN(b)) b = 0;
+      if (parts[2] && parts[2].includes('%')) b = b / 100;
+      
+      let alpha = 1;
+      if (parts[3]) {
+        alpha = parseFloat(parts[3]);
+        if (parts[3].includes('%')) alpha = alpha / 100;
+      }
+      if (isNaN(alpha)) alpha = 1;
+      
+      return oklabToRgb(L, a, b, alpha);
+    } catch (e) {
+      return 'rgb(0,0,0)';
+    }
+  });
+
+  return result;
+}
+
 export default function StudentReportView() {
   const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
@@ -154,6 +259,12 @@ export default function StudentReportView() {
         letterRendering: true,
         scrollY: 0,
         onclone: (documentClone: Document) => {
+          const hiddenContainers = documentClone.querySelectorAll('.pdf-export-container');
+          hiddenContainers.forEach((container: any) => {
+            container.style.position = 'static';
+            container.style.opacity = '1';
+            container.style.display = 'block';
+          });
           const previewContainer = documentClone.querySelector('.student-report-preview-container');
           if (previewContainer) {
             (previewContainer as HTMLElement).style.padding = '0';
@@ -168,10 +279,48 @@ export default function StudentReportView() {
             page.style.maxHeight = '296mm';
             page.style.margin = '0';
           });
+
+          // Convert modern oklch/oklab styles inside <style> tags of documentClone
+          documentClone.querySelectorAll('style').forEach((styleEl: any) => {
+            if (styleEl.textContent) {
+              styleEl.textContent = convertModernColors(styleEl.textContent);
+            }
+          });
+
+          // Convert inline styles of all elements in the cloned DOM
+          documentClone.querySelectorAll('*').forEach((el: any) => {
+            if (el.hasAttribute('style')) {
+              const styleAttr = el.getAttribute('style');
+              if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
+                el.setAttribute('style', convertModernColors(styleAttr));
+              }
+            }
+          });
         }
       },
       jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const, compress: true },
       pagebreak: { mode: 'css' as const, avoid: ['.report-sheet-page'] }
+    };
+
+    // Intercept window.getComputedStyle to translate any oklch color to standard sRGB
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = function (elt, pseudoElt) {
+      const style = originalGetComputedStyle(elt, pseudoElt);
+      return new Proxy(style, {
+        get(target, prop, receiver) {
+          if (prop === 'getPropertyValue') {
+            return function (propertyName: string) {
+              const val = target.getPropertyValue(propertyName);
+              return typeof val === 'string' ? convertModernColors(val) : val;
+            };
+          }
+          const val = Reflect.get(target, prop, receiver);
+          if (typeof val === 'string') {
+            return convertModernColors(val);
+          }
+          return val;
+        }
+      }) as any;
     };
 
     html2pdf().from(element).set(opt).save()
@@ -183,6 +332,9 @@ export default function StudentReportView() {
         console.error(err);
         toast.dismiss(toastId);
         toast.error("Failed to generate PDF. Please try again.");
+      })
+      .finally(() => {
+        window.getComputedStyle = originalGetComputedStyle;
       });
   };
 
@@ -290,7 +442,7 @@ export default function StudentReportView() {
       </div>
 
       {/* Screen Views */}
-      <div className="print:block">
+      <div className="print:hidden">
         <AnimatePresence mode="wait">
           {viewMode === 'print' ? (
             /* Standard A4 Print View (On-screen) */
@@ -640,7 +792,7 @@ export default function StudentReportView() {
         When downloading a PDF or Triggering a Native print, we pull directly from this ref.
         This resolves the critical issue where mobile viewports would export a squeezed, mobile-scaled PDF!
       */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', pointerEvents: 'none' }}>
+      <div className="pdf-export-container absolute inset-x-0 top-0 opacity-0 pointer-events-none -z-50 print:static print:opacity-100 print:pointer-events-auto print:z-auto print:w-full print:block">
         <div ref={reportRef} className="report-sheet-page bg-white flex flex-col p-12 border-[12px] border-double relative overflow-hidden" style={{ borderColor: '#2563eb', width: '210mm', height: '296mm', boxSizing: 'border-box' }}>
           {/* Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">

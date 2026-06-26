@@ -1,6 +1,6 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
 import React, { useState, useRef, useEffect } from 'react';
-import { Mail, Phone, MapPin, Send, Clock, Globe, ChevronDown, ChevronUp, GraduationCap, User, Home, BookOpen, Info } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, Clock, Globe, ChevronDown, ChevronUp, GraduationCap, User, Home, BookOpen, Info, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,6 +42,8 @@ export default function Contact() {
           <Link to="/" className="hover:text-blue-300 transition-colors hidden md:block">HOME</Link>
           <Link to="/about" className="hover:text-blue-300 transition-colors hidden md:block">ABOUT</Link>
           <Link to="/courses" className="hover:text-blue-300 transition-colors hidden md:block">COURSES</Link>
+          <Link to="/gallery" className="hover:text-blue-300 transition-colors hidden md:block">GALLERY</Link>
+          <Link to="/contact" className="text-blue-300 border-b-2 border-blue-300 pb-1 hover:text-blue-400 transition-colors hidden md:block font-bold">CONTACT</Link>
           
           {/* Desktop Login Buttons */}
           <div className="hidden md:flex items-center gap-2">
@@ -97,6 +99,14 @@ export default function Contact() {
                     >
                       <BookOpen className="w-4 h-4 text-slate-400" />
                       Courses
+                    </Link>
+                    <Link 
+                      to="/gallery"
+                      onClick={() => setIsLoginDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 border-t border-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      <LayoutGrid className="w-4 h-4 text-slate-400" />
+                      Gallery
                     </Link>
                     
                     {/* Divider for logins */}

@@ -59,6 +59,21 @@
         "date": { "type": "timestamp" }
       },
       "required": ["studentId", "studentName", "class", "score", "total", "percentage"]
+    },
+    "GalleryMember": {
+      "title": "GalleryMember",
+      "description": "School Management or PTA EXCO Gallery Member Profile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "role": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["name", "title", "role", "imageUrl", "description", "order"]
     }
   },
   "firestore": {
@@ -77,6 +92,10 @@
     "/cbt_results/{resultId}": {
       "schema": { "$ref": "#/entities/CBTResult" },
       "description": "Results from CBT exams"
+    },
+    "/gallery_members/{memberId}": {
+      "schema": { "$ref": "#/entities/GalleryMember" },
+      "description": "Gallery members collection"
     }
   }
 }

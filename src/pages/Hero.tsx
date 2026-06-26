@@ -1,7 +1,7 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Globe, Users, ChevronRight, GraduationCap, ChevronDown, ChevronUp, LogIn, User } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Globe, Users, ChevronRight, GraduationCap, ChevronDown, ChevronUp, LogIn, User, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -37,6 +37,7 @@ export default function Hero() {
           <div className="hidden lg:flex items-center gap-8 text-[10px] font-bold tracking-[0.2em] uppercase">
             <Link to="/about" className="text-white hover:text-red-500 transition-colors">About</Link>
             <Link to="/courses" className="text-white hover:text-red-500 transition-colors">Academics</Link>
+            <Link to="/gallery" className="text-white hover:text-red-500 transition-colors">Gallery</Link>
             <Link to="/contact" className="text-white hover:text-red-500 transition-colors">Contact</Link>
           </div>
 
@@ -90,6 +91,14 @@ export default function Hero() {
                       >
                         <GraduationCap className="w-4 h-4 text-slate-400" />
                         Academics
+                      </Link>
+                      <Link 
+                        to="/gallery"
+                        onClick={() => setIsLoginDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2.5 border-t border-white/5 text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-white hover:bg-white/10 transition-all"
+                      >
+                        <LayoutGrid className="w-4 h-4 text-slate-400" />
+                        Gallery
                       </Link>
                       <Link 
                         to="/contact"

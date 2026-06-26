@@ -20,6 +20,8 @@ import ScoreEntry from './pages/ScoreEntry';
 import AdminSettings from './pages/AdminSettings';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentReportView from './pages/StudentReportView';
+import Gallery from './pages/Gallery';
+import AdminGallery from './pages/AdminGallery';
 import { Toaster } from '@/components/ui/sonner';
 
 // Mock Data & Columns for Modules
@@ -114,6 +116,7 @@ function AnimatedRoutes() {
         <Route path="/" element={<PageWrapper><Hero /></PageWrapper>} />
         <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
         <Route path="/courses" element={<PageWrapper><Courses /></PageWrapper>} />
+        <Route path="/gallery" element={<PageWrapper><Gallery /></PageWrapper>} />
         <Route path="/contact" element={<PageWrapper><Contact /></PageWrapper>} />
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
@@ -135,6 +138,7 @@ function AnimatedRoutes() {
           <Route path="cbt" element={<PageWrapper><AdminCBT /></PageWrapper>} />
           <Route path="cbt-results" element={<PageWrapper><AdminCBTResults /></PageWrapper>} />
           <Route path="score-entry" element={<PageWrapper><ScoreEntry /></PageWrapper>} />
+          <Route path="gallery" element={<PageWrapper><AdminGallery /></PageWrapper>} />
           <Route path="settings" element={<PageWrapper><AdminSettings /></PageWrapper>} />
         </Route>
         <Route path="/exam/:examId" element={<PageWrapper><CBTExam /></PageWrapper>} />

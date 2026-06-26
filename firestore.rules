@@ -12,11 +12,7 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == "abdullahibichishuaib.ABS@gmail.com" ||
-        request.auth.token.email == "admin@NDA.academy" ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      return true;
     }
     
     function incoming() {
@@ -89,34 +85,23 @@ service cloud.firestore {
 
     // Collections
     match /students/{studentId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin() && isValidStudent(incoming());
-      allow update: if isAdmin() && 
-                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'admissionNo', 'class', 'arm', 'gender']) &&
-                    incoming().name is string && incoming().name.size() <= 200 &&
-                    incoming().admissionNo is string && incoming().admissionNo.size() <= 50 &&
-                    incoming().class is string && incoming().class.size() <= 50 &&
-                    incoming().arm is string && incoming().arm.size() <= 10 &&
-                    incoming().gender is string && incoming().gender.size() <= 20;
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     match /questions/{questionId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin() && request.resource.data.keys().hasAll(['subject', 'class', 'text', 'answer', 'difficulty', 'createdAt']);
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     match /scores/{scoreId} {
-      allow read: if isAdmin();
-      allow create, update: if isAdmin() && isValidScore(incoming());
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     match /cbt_results/{resultId} {
-      allow create: if isValidCBTResult(incoming());
-      allow get, list, update, delete: if isAdmin();
+      allow read, write: if true;
+    }
+
+    match /gallery_members/{memberId} {
+      allow read, write: if true;
     }
   }
 }

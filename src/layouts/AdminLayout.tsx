@@ -53,6 +53,7 @@ const sidebarGroups = [
     links: [
       { name: 'Fees Module', path: '/admin/fees', icon: CreditCard },
       { name: 'Parent Module', path: '/admin/parents', icon: UserCircle },
+      { name: 'Gallery Module', path: '/admin/gallery', icon: LayoutGrid },
       { name: 'Settings', path: '/admin/settings', icon: Settings },
     ]
   }

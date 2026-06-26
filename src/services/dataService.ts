@@ -26,7 +26,7 @@ export const seedDatabase = async (onProgress: (msg: string) => void) => {
   const session = "2024/2025";
   const term = "1st";
 
-  const studentCountPerCategory = 3; 
+  const studentCountPerCategory = 10; 
 
   for (const studentClass of classes) {
     onProgress(`Syncing ${studentClass.toUpperCase()}...`);
@@ -36,6 +36,16 @@ export const seedDatabase = async (onProgress: (msg: string) => void) => {
       if (studentClass.startsWith('jss') && (arm === 'Science 1' || arm === 'Art 1')) continue;
       if (studentClass.includes('science') && (arm === 'Art 1')) continue;
       if (studentClass.includes('art') && (arm === 'Science 1')) continue;
+      if (studentClass.includes('commerce') && (arm === 'Science 1' || arm === 'Art 1')) continue;
+
+      const studentsRef = collection(db, 'students');
+      const q = query(studentsRef, where('class', '==', studentClass), where('arm', '==', arm));
+      const existingSnap = await getDocs(q);
+      
+      if (existingSnap.size >= studentCountPerCategory) {
+        onProgress(`Skipping ${studentClass.toUpperCase()} ${arm} (already has ${existingSnap.size} students)...`);
+        continue;
+      }
 
       const batch = writeBatch(db);
       
@@ -65,20 +75,28 @@ export const seedDatabase = async (onProgress: (msg: string) => void) => {
           
           batch.set(scoreRef, {
             studentId,
-            subject: subject.toLowerCase(),
-            class: studentClass,
-            arm: arm,
-            term,
+            studentName: name,
+            admissionNo,
             session,
+            term,
+            class: studentClass,
+            arm,
+            subject: subject.toLowerCase(),
             ca,
             exam,
             total,
             grade: total >= 75 ? 'A' : total >= 65 ? 'B' : total >= 50 ? 'C' : total >= 40 ? 'D' : 'F',
-            createdAt: serverTimestamp()
+            updatedAt: serverTimestamp()
           });
         });
       }
-      await batch.commit();
+      try {
+        await batch.commit();
+        await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay to prevent rate limits
+      } catch (e: any) {
+        console.error(`Failed at ${studentClass} ${arm}:`, e);
+        throw new Error(`Failed to sync ${studentClass} ${arm}: ${e.message}`);
+      }
     }
   }
   

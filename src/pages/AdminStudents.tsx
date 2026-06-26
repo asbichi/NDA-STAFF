@@ -241,11 +241,37 @@ export default function AdminStudents() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Target Class</Label>
-                  <Input value={studentClass} onChange={e => setStudentClass(e.target.value)} required placeholder="e.g. JSS 1" className="rounded-none border-slate-200" />
+                  <Select value={studentClass} onValueChange={setStudentClass} required>
+                    <SelectTrigger className="rounded-none border-slate-200"><SelectValue placeholder="Select Class" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jss1">JSS 1</SelectItem>
+                      <SelectItem value="jss2">JSS 2</SelectItem>
+                      <SelectItem value="jss3">JSS 3</SelectItem>
+                      <SelectItem value="sss1_science">SSS 1 Science</SelectItem>
+                      <SelectItem value="sss1_art">SSS 1 Art</SelectItem>
+                      <SelectItem value="sss1_commerce">SSS 1 Commerce</SelectItem>
+                      <SelectItem value="sss2_science">SSS 2 Science</SelectItem>
+                      <SelectItem value="sss2_art">SSS 2 Art</SelectItem>
+                      <SelectItem value="sss2_commerce">SSS 2 Commerce</SelectItem>
+                      <SelectItem value="sss3_science">SSS 3 Science</SelectItem>
+                      <SelectItem value="sss3_art">SSS 3 Art</SelectItem>
+                      <SelectItem value="sss3_commerce">SSS 3 Commerce</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Arm</Label>
-                  <Input value={arm} onChange={e => setArm(e.target.value)} required placeholder="e.g. Science 1" className="rounded-none border-slate-200" />
+                  <Select value={arm} onValueChange={setArm} required>
+                    <SelectTrigger className="rounded-none border-slate-200"><SelectValue placeholder="Select Arm" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A">Arm A</SelectItem>
+                      <SelectItem value="B">Arm B</SelectItem>
+                      <SelectItem value="C">Arm C</SelectItem>
+                      <SelectItem value="D">Arm D</SelectItem>
+                      <SelectItem value="Science 1">Science 1</SelectItem>
+                      <SelectItem value="Art 1">Art 1</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="space-y-2 col-span-2 md:col-span-1">
@@ -391,11 +417,37 @@ export default function AdminStudents() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Target Class</Label>
-                <Input value={studentClass} onChange={e => setStudentClass(e.target.value)} required placeholder="e.g. JSS 1" className="rounded-none border-slate-200" />
+                <Select value={studentClass} onValueChange={setStudentClass} required>
+                  <SelectTrigger className="rounded-none border-slate-200"><SelectValue placeholder="Select Class" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="jss1">JSS 1</SelectItem>
+                    <SelectItem value="jss2">JSS 2</SelectItem>
+                    <SelectItem value="jss3">JSS 3</SelectItem>
+                    <SelectItem value="sss1_science">SSS 1 Science</SelectItem>
+                    <SelectItem value="sss1_art">SSS 1 Art</SelectItem>
+                    <SelectItem value="sss1_commerce">SSS 1 Commerce</SelectItem>
+                    <SelectItem value="sss2_science">SSS 2 Science</SelectItem>
+                    <SelectItem value="sss2_art">SSS 2 Art</SelectItem>
+                    <SelectItem value="sss2_commerce">SSS 2 Commerce</SelectItem>
+                    <SelectItem value="sss3_science">SSS 3 Science</SelectItem>
+                    <SelectItem value="sss3_art">SSS 3 Art</SelectItem>
+                    <SelectItem value="sss3_commerce">SSS 3 Commerce</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Arm</Label>
-                <Input value={arm} onChange={e => setArm(e.target.value)} required placeholder="e.g. Science 1" className="rounded-none border-slate-200" />
+                <Select value={arm} onValueChange={setArm} required>
+                  <SelectTrigger className="rounded-none border-slate-200"><SelectValue placeholder="Select Arm" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">Arm A</SelectItem>
+                    <SelectItem value="B">Arm B</SelectItem>
+                    <SelectItem value="C">Arm C</SelectItem>
+                    <SelectItem value="D">Arm D</SelectItem>
+                    <SelectItem value="Science 1">Science 1</SelectItem>
+                    <SelectItem value="Art 1">Art 1</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2 col-span-2 md:col-span-1">

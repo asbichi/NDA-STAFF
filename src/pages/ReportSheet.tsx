@@ -436,6 +436,111 @@ const SingleReportPhone = ({ data }: { data: StudentReportData }) => {
   );
 };
 
+function oklabToRgb(L: number, a: number, b: number, alpha: number): string {
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  
+  const l3 = l_ * l_ * l_;
+  const m3 = m_ * m_ * m_;
+  const s3 = s_ * s_ * s_;
+  
+  const r = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+  const g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+  const b_ = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+  
+  const toSRGB = (c: number) => {
+    if (c <= 0.0031308) return 12.92 * c;
+    return 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  };
+  
+  const sR = Math.max(0, Math.min(255, Math.round(toSRGB(r) * 255)));
+  const sG = Math.max(0, Math.min(255, Math.round(toSRGB(g) * 255)));
+  const sB = Math.max(0, Math.min(255, Math.round(toSRGB(b_) * 255)));
+  
+  if (alpha === 1) {
+    return `rgb(${sR}, ${sG}, ${sB})`;
+  } else {
+    return `rgba(${sR}, ${sG}, ${sB}, ${alpha})`;
+  }
+}
+
+function convertModernColors(str: any): any {
+  if (typeof str !== 'string') return str;
+  if (!str.includes('oklch') && !str.includes('oklab')) return str;
+  
+  let result = str.replace(/oklch\(([^)]+)\)/gi, (match, content) => {
+    try {
+      const parts = content.trim().split(/[\s,+/]+/);
+      if (parts.length < 3) return 'rgb(0,0,0)';
+      
+      let L = parseFloat(parts[0]);
+      if (isNaN(L)) L = 0;
+      if (parts[0] && parts[0].includes('%')) L = L / 100;
+      
+      let C = parseFloat(parts[1]);
+      if (isNaN(C)) C = 0;
+      if (parts[1] && parts[1].includes('%')) C = C / 100;
+      
+      let H = parseFloat(parts[2]);
+      if (isNaN(H)) H = 0;
+      if (parts[2]) {
+        if (parts[2].includes('deg')) H = parseFloat(parts[2].replace('deg', ''));
+        if (parts[2].includes('rad')) H = parseFloat(parts[2].replace('rad', '')) * (180 / Math.PI);
+        if (parts[2].includes('turn')) H = parseFloat(parts[2].replace('turn', '')) * 360;
+      }
+      if (isNaN(H)) H = 0;
+      
+      let alpha = 1;
+      if (parts[3]) {
+        alpha = parseFloat(parts[3]);
+        if (parts[3].includes('%')) alpha = alpha / 100;
+      }
+      if (isNaN(alpha)) alpha = 1;
+      
+      const hRad = H * Math.PI / 180;
+      const a = C * Math.cos(hRad);
+      const b = C * Math.sin(hRad);
+      
+      return oklabToRgb(L, a, b, alpha);
+    } catch (e) {
+      return 'rgb(0,0,0)';
+    }
+  });
+
+  result = result.replace(/oklab\(([^)]+)\)/gi, (match, content) => {
+    try {
+      const parts = content.trim().split(/[\s,+/]+/);
+      if (parts.length < 3) return 'rgb(0,0,0)';
+      
+      let L = parseFloat(parts[0]);
+      if (isNaN(L)) L = 0;
+      if (parts[0] && parts[0].includes('%')) L = L / 100;
+      
+      let a = parseFloat(parts[1]);
+      if (isNaN(a)) a = 0;
+      if (parts[1] && parts[1].includes('%')) a = a / 100;
+      
+      let b = parseFloat(parts[2]);
+      if (isNaN(b)) b = 0;
+      if (parts[2] && parts[2].includes('%')) b = b / 100;
+      
+      let alpha = 1;
+      if (parts[3]) {
+        alpha = parseFloat(parts[3]);
+        if (parts[3].includes('%')) alpha = alpha / 100;
+      }
+      if (isNaN(alpha)) alpha = 1;
+      
+      return oklabToRgb(L, a, b, alpha);
+    } catch (e) {
+      return 'rgb(0,0,0)';
+    }
+  });
+
+  return result;
+}
+
 export default function ReportSheet() {
   const [selectedSession, setSelectedSession] = useState('2024/2025');
   const [selectedTerm, setSelectedTerm] = useState('');
@@ -742,6 +847,12 @@ export default function ReportSheet() {
           letterRendering: true,
           scrollY: 0,
           onclone: (documentClone: Document) => {
+            const hiddenContainers = documentClone.querySelectorAll('.pdf-export-container');
+            hiddenContainers.forEach((container: any) => {
+              container.style.position = 'static';
+              container.style.opacity = '1';
+              container.style.display = 'block';
+            });
             const previewContainer = documentClone.querySelector('.report-sheet-preview-container');
             if (previewContainer) {
               (previewContainer as HTMLElement).style.padding = '0';
@@ -768,22 +879,22 @@ export default function ReportSheet() {
                 page.classList.remove('mb-8');
               }
             });
-            
-            const elements = documentClone.querySelectorAll('*');
-            elements.forEach((el: any) => {
-              const styles = window.getComputedStyle(el);
-              ['color', 'backgroundColor', 'borderColor'].forEach(prop => {
-                const value = el.style[prop] || styles.getPropertyValue(prop);
-                if (value && (value.includes('oklch') || value.includes('oklab'))) {
-                   if (prop === 'color') el.style.color = '#111827';
-                   if (prop === 'backgroundColor') {
-                     if (!el.classList.contains('bg-primary')) {
-                       el.style.backgroundColor = 'transparent';
-                     }
-                   }
-                   if (prop === 'borderColor') el.style.borderColor = '#e2e8f0';
+
+            // Convert modern oklch/oklab styles inside <style> tags of documentClone
+            documentClone.querySelectorAll('style').forEach((styleEl: any) => {
+              if (styleEl.textContent) {
+                styleEl.textContent = convertModernColors(styleEl.textContent);
+              }
+            });
+
+            // Convert inline styles of all elements in the cloned DOM
+            documentClone.querySelectorAll('*').forEach((el: any) => {
+              if (el.hasAttribute('style')) {
+                const styleAttr = el.getAttribute('style');
+                if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
+                  el.setAttribute('style', convertModernColors(styleAttr));
                 }
-              });
+              }
             });
           }
         },
@@ -791,9 +902,34 @@ export default function ReportSheet() {
         pagebreak: { mode: 'css', avoid: ['.report-sheet-page'] }
       };
 
-      // Ensure the element is visible and rendered
-      await exporter().set(opt).from(targetRef.current).save();
-      toast.success('PDF downloaded successfully!');
+      // Intercept window.getComputedStyle to translate any oklch color to standard sRGB
+      const originalGetComputedStyle = window.getComputedStyle;
+      window.getComputedStyle = function (elt, pseudoElt) {
+        const style = originalGetComputedStyle(elt, pseudoElt);
+        return new Proxy(style, {
+          get(target, prop, receiver) {
+            if (prop === 'getPropertyValue') {
+              return function (propertyName: string) {
+                const val = target.getPropertyValue(propertyName);
+                return typeof val === 'string' ? convertModernColors(val) : val;
+              };
+            }
+            const val = Reflect.get(target, prop, receiver);
+            if (typeof val === 'string') {
+              return convertModernColors(val);
+            }
+            return val;
+          }
+        }) as any;
+      };
+
+      try {
+        // Ensure the element is visible and rendered
+        await exporter().set(opt).from(targetRef.current).save();
+        toast.success('PDF downloaded successfully!');
+      } finally {
+        window.getComputedStyle = originalGetComputedStyle;
+      }
     } catch (error: any) {
       console.error("PDF Export error:", error);
       toast.error(`Failed to generate PDF: ${error.message || "Please try again or use the Print button."}`);
@@ -1116,7 +1252,7 @@ export default function ReportSheet() {
           </div>
 
           {/* Printable templates kept always available in the DOM for PDF engine / browser printers */}
-          <div className={viewMode === 'phone' ? 'absolute left-[-9999px] top-[-9999px] pointer-events-none' : 'w-full overflow-x-auto pb-4 custom-scrollbar'}>
+          <div className={`pdf-export-container ${viewMode === 'phone' ? 'absolute inset-x-0 top-0 opacity-0 pointer-events-none -z-50 print:static print:opacity-100 print:pointer-events-auto print:z-auto print:w-full print:overflow-visible' : 'w-full overflow-x-auto pb-4 custom-scrollbar print:static print:w-full print:overflow-visible'}`}>
             {isBulkMode ? (
               <div ref={bulkReportRef} className="m-0 p-0 overflow-visible w-[210mm] mx-auto">
                 {studentReports.map((report, idx) => (
