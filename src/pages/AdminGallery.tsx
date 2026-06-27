@@ -27,73 +27,6 @@ export interface GalleryMember {
   order: number;
 }
 
-const SEED_MEMBERS = [
-  {
-    name: 'Major General Oluyemi Olatoye',
-    title: 'Commandant',
-    role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-    description: 'Providing strategic leadership and ensuring high standards of discipline and educational excellence at the NDA Staff Secondary School.',
-    order: 1
-  },
-  {
-    name: 'Mrs. Helen John',
-    title: 'School Principal',
-    role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop',
-    description: 'Directing academic and administrative operations, fostering a learning environment built on discipline, integrity, and diligence.',
-    order: 2
-  },
-  {
-    name: 'Major C. D. Yusuf',
-    title: 'Vice Principal Academic',
-    role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-    description: 'Dedicated to fostering academic excellence, innovation in curriculum delivery, and ensuring a robust learning environment where every student can achieve their highest potential.',
-    order: 3
-  },
-  {
-    name: 'Mrs. Elizabeth Ibrahim',
-    title: 'Vice Principal Administration',
-    role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
-    description: 'Coordinating general administration, student welfare, extracurricular programs, and managing school staff affairs.',
-    order: 4
-  },
-  {
-    name: 'Dr. Farouk Umar',
-    title: 'PTA Chairman',
-    role: 'pta' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop',
-    description: 'Promoting mutual understanding and strong partnership between school management, teachers, and parents for student growth.',
-    order: 5
-  },
-  {
-    name: 'Mrs. Amina Bello',
-    title: 'PTA Vice Chair',
-    role: 'pta' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
-    description: 'Assisting in governing PTA initiatives, organizing community engagement projects, and acting as liaison with parent groups.',
-    order: 6
-  },
-  {
-    name: 'Mr. Charles Nwosu',
-    title: 'General Secretary PTA',
-    role: 'pta' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop',
-    description: 'A pivotal link between the parent body and the school management, driving clear communication and successfully organizing initiatives that strengthen the school community.',
-    order: 7
-  },
-  {
-    name: 'Alhaji Shehu Garba',
-    title: 'PTA Treasurer',
-    role: 'pta' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=400&h=400&fit=crop',
-    description: 'Ensuring transparent financial records, managing PTA funds, budgets, and reporting financial status during general assembly meetings.',
-    order: 8
-  }
-];
-
 export default function AdminGallery() {
   const [members, setMembers] = useState<GalleryMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,22 +60,6 @@ export default function AdminGallery() {
         ...doc.data()
       })) as GalleryMember[];
 
-      // Check if Commandant is in the list
-      const commandantExists = list.some(m => m.title.toLowerCase().includes('commandant'));
-
-      if (snapshot.empty) {
-        // Seed all members if the collection is empty
-        for (const item of SEED_MEMBERS) {
-          const docRef = await addDoc(colRef, { ...item, createdAt: serverTimestamp() });
-          list.push({ id: docRef.id, ...item });
-        }
-      } else if (!commandantExists) {
-        // Add missing Commandant
-        const commandantItem = SEED_MEMBERS.find(m => m.title.toLowerCase().includes('commandant'))!;
-        const docRef = await addDoc(colRef, { ...commandantItem, createdAt: serverTimestamp() });
-        list = [{ id: docRef.id, ...commandantItem }, ...list];
-      }
-
       setMembers(list);
     } catch (err: any) {
       console.error("Error fetching gallery:", err);
@@ -153,24 +70,7 @@ export default function AdminGallery() {
   };
 
   useEffect(() => {
-    const updateExisting = async () => {
-      try {
-        const q = query(collection(db, 'gallery_members'));
-        const snapshot = await getDocs(q);
-        snapshot.docs.forEach(async (docSnap) => {
-          const data = docSnap.data();
-          if (data.title === 'Vice Principal Academic' && data.description.includes('Overseeing curriculum')) {
-             await updateDoc(docSnap.ref, { description: 'Dedicated to fostering academic excellence, innovation in curriculum delivery, and ensuring a robust learning environment where every student can achieve their highest potential.' });
-          }
-          if (data.title === 'PTA Secretary') {
-             await updateDoc(docSnap.ref, { title: 'General Secretary PTA', description: 'A pivotal link between the parent body and the school management, driving clear communication and successfully organizing initiatives that strengthen the school community.' });
-          }
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    updateExisting().then(() => fetchMembers());
+    fetchMembers();
   }, []);
 
   // File Upload Helper to convert file to Base64 string
@@ -433,11 +333,11 @@ export default function AdminGallery() {
           {filteredMembers.map((member, index) => (
             <Card key={member.id} className="overflow-hidden border border-slate-100 bg-white shadow-sm hover:shadow-md transition-shadow rounded-2xl flex flex-col h-full">
               {/* Photo & Actions */}
-              <div className="relative aspect-square w-full overflow-hidden bg-slate-50 border-b border-slate-50">
+              <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-50 border-b border-slate-50">
                 <img 
                   src={member.imageUrl} 
                   alt={member.name} 
-                  className="object-cover object-top w-full h-full"
+                  className="object-contain object-center bg-slate-50 w-full h-full"
                   referrerPolicy="no-referrer"
                   onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop'; }}
                 />
@@ -603,7 +503,7 @@ export default function AdminGallery() {
                 <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-50/50 transition-colors relative">
                   {formImageUrl ? (
                     <div className="relative w-28 h-28 rounded-full overflow-hidden border-2 border-white shadow-md">
-                      <img src={formImageUrl} alt="Preview" className="w-full h-full object-cover object-top" onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop'; toast.error("Invalid image URL"); }} />
+                      <img src={formImageUrl} alt="Preview" className="w-full h-full object-contain object-center bg-slate-50" onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop'; toast.error("Invalid image URL"); }} />
                       <button
                         type="button"
                         onClick={() => setFormImageUrl('')}
@@ -641,7 +541,7 @@ export default function AdminGallery() {
                   />
                   {formImageUrl && (
                     <div className="mt-2 flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <img src={formImageUrl} alt="Preview" className="w-10 h-10 rounded-full object-cover object-top shrink-0" onError={() => toast.error("Invalid image URL")} />
+                      <img src={formImageUrl} alt="Preview" className="w-10 h-10 rounded-full object-contain object-center bg-slate-50 shrink-0" onError={() => toast.error("Invalid image URL")} />
                       <span className="text-xs text-slate-500 truncate">{formImageUrl}</span>
                     </div>
                   )}

@@ -20,73 +20,6 @@ export interface GalleryMember {
   order: number;
 }
 
-const SEED_MEMBERS = [
-  {
-    name: 'Major General Oluyemi Olatoye',
-    title: 'Commandant',
-    role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-    description: 'Providing strategic leadership and ensuring high standards of discipline and educational excellence at the NDA Staff Secondary School.',
-    order: 1
-  },
-  {
-    name: 'Mrs. Helen John',
-    title: 'School Principal',
-    role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop',
-    description: 'Directing academic and administrative operations, fostering a learning environment built on discipline, integrity, and diligence.',
-    order: 2
-  },
-  {
-    name: 'Major C. D. Yusuf',
-    title: 'Vice Principal Academic',
-    role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-    description: 'Dedicated to fostering academic excellence, innovation in curriculum delivery, and ensuring a robust learning environment where every student can achieve their highest potential.',
-    order: 3
-  },
-  {
-    name: 'Mrs. Elizabeth Ibrahim',
-    title: 'Vice Principal Administration',
-    role: 'management' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
-    description: 'Coordinating general administration, student welfare, extracurricular programs, and managing school staff affairs.',
-    order: 4
-  },
-  {
-    name: 'Dr. Farouk Umar',
-    title: 'PTA Chairman',
-    role: 'pta' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop',
-    description: 'Promoting mutual understanding and strong partnership between school management, teachers, and parents for student growth.',
-    order: 5
-  },
-  {
-    name: 'Mrs. Amina Bello',
-    title: 'PTA Vice Chair',
-    role: 'pta' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop',
-    description: 'Assisting in governing PTA initiatives, organizing community engagement projects, and acting as liaison with parent groups.',
-    order: 6
-  },
-  {
-    name: 'Mr. Charles Nwosu',
-    title: 'General Secretary PTA',
-    role: 'pta' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop',
-    description: 'A pivotal link between the parent body and the school management, driving clear communication and successfully organizing initiatives that strengthen the school community.',
-    order: 7
-  },
-  {
-    name: 'Alhaji Shehu Garba',
-    title: 'PTA Treasurer',
-    role: 'pta' as const,
-    imageUrl: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=400&h=400&fit=crop',
-    description: 'Ensuring transparent financial records, managing PTA funds, budgets, and reporting financial status during general assembly meetings.',
-    order: 8
-  }
-];
-
 export default function Gallery() {
   const [members, setMembers] = useState<GalleryMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,32 +40,6 @@ export default function Gallery() {
           id: doc.id,
           ...doc.data()
         })) as GalleryMember[];
-
-        // Check if Commandant is in the list
-        const commandantExists = list.some(m => m.title.toLowerCase().includes('commandant'));
-
-        if (!commandantExists) {
-          // Add missing Commandant
-          const commandantItem = {
-            name: 'Major General Oluyemi Olatoye',
-            title: 'Commandant',
-            role: 'management' as const,
-            imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-            description: 'Providing strategic leadership and ensuring high standards of discipline and educational excellence at the NDA Staff Secondary School.',
-            order: 1
-          };
-          const docRef = await addDoc(colRef, { ...commandantItem, createdAt: serverTimestamp() });
-          list = [{ id: docRef.id, ...commandantItem }, ...list];
-        }
-
-        // If collection was empty initially (and no SEED_MEMBERS were in DB), add others
-        if (snapshot.empty) {
-            // Need to add others too
-            for (const item of SEED_MEMBERS.filter(m => !m.title.toLowerCase().includes('commandant'))) {
-                const docRef = await addDoc(colRef, { ...item, createdAt: serverTimestamp() });
-                list.push({ id: docRef.id, ...item });
-            }
-        }
 
         setMembers(list);
       } catch (err) {
@@ -352,11 +259,11 @@ export default function Gallery() {
                 >
                   <Card className="overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl bg-white flex flex-col h-full hover:-translate-y-1">
                     {/* Image Area */}
-                    <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
+                    <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100">
                       <img 
                         src={member.imageUrl} 
                         alt={member.name} 
-                        className="object-cover object-top w-full h-full group-hover:scale-105 transition-transform duration-500"
+                        className="object-contain object-center bg-slate-50 w-full h-full group-hover:scale-105 transition-transform duration-500"
                         referrerPolicy="no-referrer"
                         onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop'; }}
                       />
@@ -409,11 +316,11 @@ export default function Gallery() {
           {selectedMember && (
             <div className="grid grid-cols-1 md:grid-cols-2">
               {/* Left Profile Image */}
-              <div className="relative aspect-square md:aspect-auto md:h-full min-h-[250px] bg-slate-100">
+              <div className="relative aspect-[3/4] md:aspect-auto md:h-full min-h-[250px] bg-slate-100">
                 <img 
                   src={selectedMember.imageUrl} 
                   alt={selectedMember.name} 
-                  className="object-cover object-top w-full h-full"
+                  className="object-contain object-center bg-slate-50 w-full h-full"
                   referrerPolicy="no-referrer"
                   onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop'; }}
                 />
