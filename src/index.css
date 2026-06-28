@@ -6,10 +6,10 @@
   --font-serif: "Cormorant Garamond", serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-primary: #4B3621;
-  --color-accent: #ef4444; /* Red */
+  --color-primary: #0f172a; /* Deep Executive Slate */
+  --color-accent: #2563eb; /* Royal Sapphire Blue */
   --color-paper: #f8fafc;
-  --color-coffee: #4B3621;
+  --color-coffee: #0f172a;
 }
 
 @layer base {
@@ -114,7 +114,7 @@
     --card-foreground: #171717;
     --popover: #ffffff;
     --popover-foreground: #171717;
-    --primary: #4B3621;
+    --primary: #0f172a;
     --primary-foreground: #ffffff;
     --secondary: #f5f5f5;
     --secondary-foreground: #171717;

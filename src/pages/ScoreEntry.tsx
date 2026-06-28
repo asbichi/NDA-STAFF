@@ -43,7 +43,7 @@ export default function ScoreEntry() {
   const [selectedSubject, setSelectedSubject] = useState('');
   
   const [students, setStudents] = useState<any[]>([]);
-  const [scores, setScores] = useState<Record<string, { ca: string, exam: string }>>({});
+  const [scores, setScores] = useState<Record<string, { ca1: string, ca2: string, ca3: string, ca4: string, exam: string }>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -70,7 +70,7 @@ export default function ScoreEntry() {
       
       setStudents(classStudents);
       
-      const existingScores: Record<string, { ca: string, exam: string }> = {};
+      const existingScores: Record<string, { ca1: string, ca2: string, ca3: string, ca4: string, exam: string }> = {};
       
       const promises = classStudents.map(async (student) => {
         const docId = `${selectedSession.replace('/', '-')}_${selectedTerm}_${selectedClass}_${selectedArm}_${selectedSubject}_${student.id}`;
@@ -80,15 +80,18 @@ export default function ScoreEntry() {
           if (docSnap.exists()) {
             const data = docSnap.data();
             existingScores[student.id] = {
-              ca: data.ca?.toString() || '',
+              ca1: data.ca1?.toString() || '',
+              ca2: data.ca2?.toString() || '',
+              ca3: data.ca3?.toString() || '',
+              ca4: data.ca4?.toString() || '',
               exam: data.exam?.toString() || ''
             };
           } else {
-            existingScores[student.id] = { ca: '', exam: '' };
+            existingScores[student.id] = { ca1: '', ca2: '', ca3: '', ca4: '', exam: '' };
           }
         } catch (e) {
           console.error("Failed to load for student", student.id, e);
-          existingScores[student.id] = { ca: '', exam: '' };
+          existingScores[student.id] = { ca1: '', ca2: '', ca3: '', ca4: '', exam: '' };
         }
       });
       
@@ -103,11 +106,11 @@ export default function ScoreEntry() {
     }
   };
 
-  const handleScoreChange = (studentId: string, field: 'ca' | 'exam', value: string) => {
+  const handleScoreChange = (studentId: string, field: 'ca1' | 'ca2' | 'ca3' | 'ca4' | 'exam', value: string) => {
     if (value !== '' && !/^\d+$/.test(value)) return;
     
     const numValue = parseInt(value);
-    if (field === 'ca' && numValue > 40) return;
+    if ((field === 'ca1' || field === 'ca2' || field === 'ca3' || field === 'ca4') && numValue > 10) return;
     if (field === 'exam' && numValue > 60) return;
 
     setScores(prev => ({
@@ -124,7 +127,11 @@ export default function ScoreEntry() {
     try {
       const promises = students.map(student => {
         const studentScore = scores[student.id] || {};
-        const ca = parseInt(studentScore.ca as string) || 0;
+        const ca1 = parseInt(studentScore.ca1 as string) || 0;
+        const ca2 = parseInt(studentScore.ca2 as string) || 0;
+        const ca3 = parseInt(studentScore.ca3 as string) || 0;
+        const ca4 = parseInt(studentScore.ca4 as string) || 0;
+        const ca = ca1 + ca2 + ca3 + ca4;
         const exam = parseInt(studentScore.exam as string) || 0;
         const total = ca + exam;
         const grade = calculateGrade(total);
@@ -141,6 +148,10 @@ export default function ScoreEntry() {
           class: selectedClass,
           arm: selectedArm,
           subject: selectedSubject,
+          ca1,
+          ca2,
+          ca3,
+          ca4,
           ca,
           exam,
           total,
@@ -168,14 +179,17 @@ export default function ScoreEntry() {
           animate={{ opacity: 1, x: 0 }}
         >
           <h1 className="text-4xl font-serif font-bold text-primary tracking-tight">Termly Score Entry</h1>
-          <p className="text-slate-500 mt-2 font-light">Manually key in Continuous Assessment (CA) and Examination marks per subject for the termly report sheet.</p>
+          <p className="text-slate-500 mt-2 font-light print:hidden">Manually key in Continuous Assessment (CA) and Examination marks per subject for the termly report sheet.</p>
         </motion.div>
         
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3"
+          className="flex items-center gap-3 print:hidden"
         >
+          <Button variant="outline" className="rounded-none border-primary text-primary hover:bg-primary hover:text-white" onClick={() => window.print()}>
+            Print Score Sheet
+          </Button>
           <div className="px-4 py-2 bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
             <FileEdit className="w-3.5 h-3.5" />
             Secondary Termly Report
@@ -183,7 +197,7 @@ export default function ScoreEntry() {
         </motion.div>
       </div>
 
-      <Card className="border-slate-100 shadow-sm rounded-none">
+      <Card className="border-slate-100 shadow-sm rounded-none print:hidden">
         <CardHeader className="border-b border-slate-50">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-accent" />
@@ -287,13 +301,13 @@ export default function ScoreEntry() {
               <div>
                 <CardTitle className="text-[12px] font-bold uppercase tracking-[0.2em] text-primary">Student Performance Entry</CardTitle>
                 <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
-                  CA (Max 40) + Exam (Max 60) = Total (100)
+                  CA1 (10) + CA2 (10) + CA3 (10) + CA4 (10) + Exam (60) = Total (100)
                 </CardDescription>
               </div>
               <Button 
                 onClick={handleSave} 
                 disabled={isSaving}
-                className="bg-primary hover:bg-primary/90 text-white rounded-none px-8 py-6 text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20"
+                className="bg-primary hover:bg-primary/90 text-white rounded-none px-8 py-6 text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20 print:hidden"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Commit Scores
@@ -313,63 +327,94 @@ export default function ScoreEntry() {
                         <TableHead className="w-[80px] px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">S/N</TableHead>
                         <TableHead className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Admission No</TableHead>
                         <TableHead className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Student Name</TableHead>
-                        <TableHead className="w-[180px] px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">CA Score (40)</TableHead>
-                        <TableHead className="w-[180px] px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Exam Score (60)</TableHead>
-                        <TableHead className="w-[120px] px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">Total</TableHead>
-                        <TableHead className="w-[120px] px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">Grade</TableHead>
+                        <TableHead className="w-[100px] px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">CA 1 (10)</TableHead>
+                        <TableHead className="w-[100px] px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">CA 2 (10)</TableHead>
+                        <TableHead className="w-[100px] px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">CA 3 (10)</TableHead>
+                        <TableHead className="w-[100px] px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">CA 4 (10)</TableHead>
+                        <TableHead className="w-[120px] px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Exam (60)</TableHead>
+                        <TableHead className="w-[100px] px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">Total</TableHead>
+                        <TableHead className="w-[100px] px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center">Grade</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-50">
                       {students.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-48 text-center text-slate-500">
+                          <TableCell colSpan={10} className="h-48 text-center text-slate-500">
                             <p className="text-[10px] uppercase tracking-widest font-bold">No students found matching this class and arm.</p>
                             <p className="text-xs mt-2 font-light">Register students in the Student Directory first.</p>
                           </TableCell>
                         </TableRow>
                       ) : students.map((student, index) => {
-                        const ca = parseInt(scores[student.id]?.ca) || 0;
+                        const ca1 = parseInt(scores[student.id]?.ca1) || 0;
+                        const ca2 = parseInt(scores[student.id]?.ca2) || 0;
+                        const ca3 = parseInt(scores[student.id]?.ca3) || 0;
+                        const ca4 = parseInt(scores[student.id]?.ca4) || 0;
+                        const ca = ca1 + ca2 + ca3 + ca4;
                         const exam = parseInt(scores[student.id]?.exam) || 0;
                         const total = ca + exam;
                         const grade = calculateGrade(total);
                         
                         return (
-                          <TableRow key={student.id} className="hover:bg-slate-50/50 transition-colors group">
-                            <TableCell className="px-8 py-6 text-[11px] font-bold text-slate-400">{index + 1}</TableCell>
-                            <TableCell className="px-8 py-6 font-mono text-[11px] font-bold text-slate-500">{student.admissionNo}</TableCell>
-                            <TableCell className="px-8 py-6">
+                          <TableRow key={student.id} className="hover:bg-slate-50/50 transition-colors group print:break-inside-avoid">
+                            <TableCell className="px-8 py-3 text-[11px] font-bold text-slate-400">{index + 1}</TableCell>
+                            <TableCell className="px-8 py-3 font-mono text-[11px] font-bold text-slate-500">{student.admissionNo}</TableCell>
+                            <TableCell className="px-8 py-3">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-slate-100 rounded-none flex items-center justify-center text-[10px] font-bold text-primary">
-                                  {student.name.split(' ').map((n: string) => n[0]).join('')}
-                                </div>
                                 <span className="text-sm font-bold text-primary">{student.name}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="px-8 py-6">
+                            <TableCell className="px-4 py-3">
                               <Input 
                                 type="text" 
-                                value={scores[student.id]?.ca || ''}
-                                onChange={(e) => handleScoreChange(student.id, 'ca', e.target.value)}
-                                className="w-24 rounded-none border-slate-200 text-center font-bold text-primary focus:ring-accent"
-                                placeholder="0-40"
+                                value={scores[student.id]?.ca1 || ''}
+                                onChange={(e) => handleScoreChange(student.id, 'ca1', e.target.value)}
+                                className="w-16 rounded-none border-slate-200 text-center font-bold text-primary focus:ring-accent print:border-none print:shadow-none"
+                                placeholder="0-10"
                               />
                             </TableCell>
-                            <TableCell className="px-8 py-6">
+                            <TableCell className="px-4 py-3">
+                              <Input 
+                                type="text" 
+                                value={scores[student.id]?.ca2 || ''}
+                                onChange={(e) => handleScoreChange(student.id, 'ca2', e.target.value)}
+                                className="w-16 rounded-none border-slate-200 text-center font-bold text-primary focus:ring-accent print:border-none print:shadow-none"
+                                placeholder="0-10"
+                              />
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <Input 
+                                type="text" 
+                                value={scores[student.id]?.ca3 || ''}
+                                onChange={(e) => handleScoreChange(student.id, 'ca3', e.target.value)}
+                                className="w-16 rounded-none border-slate-200 text-center font-bold text-primary focus:ring-accent print:border-none print:shadow-none"
+                                placeholder="0-10"
+                              />
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <Input 
+                                type="text" 
+                                value={scores[student.id]?.ca4 || ''}
+                                onChange={(e) => handleScoreChange(student.id, 'ca4', e.target.value)}
+                                className="w-16 rounded-none border-slate-200 text-center font-bold text-primary focus:ring-accent print:border-none print:shadow-none"
+                                placeholder="0-10"
+                              />
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
                               <Input 
                                 type="text" 
                                 value={scores[student.id]?.exam || ''}
                                 onChange={(e) => handleScoreChange(student.id, 'exam', e.target.value)}
-                                className="w-24 rounded-none border-slate-200 text-center font-bold text-primary focus:ring-accent"
+                                className="w-20 rounded-none border-slate-200 text-center font-bold text-primary focus:ring-accent print:border-none print:shadow-none"
                                 placeholder="0-60"
                               />
                             </TableCell>
-                            <TableCell className="px-8 py-6 text-center">
+                            <TableCell className="px-4 py-3 text-center">
                               <span className={`text-xl font-serif font-bold ${total > 0 ? 'text-primary' : 'text-slate-200'}`}>
                                 {total.toString().padStart(2, '0')}
                               </span>
                             </TableCell>
-                            <TableCell className="px-8 py-6 text-center">
-                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-none font-serif font-bold text-sm border ${
+                            <TableCell className="px-4 py-3 text-center">
+                              <span className={`inline-flex items-center justify-center w-10 h-10 rounded-none font-serif font-bold text-sm border print:border-none ${
                                 total === 0 ? 'bg-slate-50 text-slate-300 border-slate-100' :
                                 grade === 'A' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                 grade === 'B' ? 'bg-blue-50 text-blue-700 border-blue-100' :

@@ -85,9 +85,6 @@ export default function Gallery() {
           
           {/* Desktop Login Buttons */}
           <div className="hidden md:flex items-center gap-2">
-            <Link to="/login?role=admin">
-              <Button variant="outline" className="border-white text-white hover:bg-white hover:text-primary text-xs uppercase tracking-wider px-3 h-9">Staff Login</Button>
-            </Link>
             <Link to="/login?role=student">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white text-xs uppercase tracking-wider px-3 h-9">Student Portal</Button>
             </Link>
@@ -165,14 +162,6 @@ export default function Gallery() {
                     >
                       <GraduationCap className="w-4 h-4 text-blue-600" />
                       Student Portal
-                    </Link>
-                    <Link 
-                      to="/login?role=admin"
-                      onClick={() => setIsLoginDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 border-t border-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all"
-                    >
-                      <User className="w-4 h-4 text-slate-400" />
-                      Staff Login
                     </Link>
                   </div>
                 </motion.div>

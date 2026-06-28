@@ -58,6 +58,7 @@ export const seedDatabase = async (onProgress: (msg: string) => void) => {
         const studentRef = doc(db, 'students', studentId);
         batch.set(studentRef, {
           name,
+          studentName: name,
           admissionNo,
           class: studentClass,
           arm: arm,

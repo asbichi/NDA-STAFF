@@ -44,11 +44,6 @@ export default function Hero() {
           <div className="flex items-center gap-4">
             {/* Desktop View Login Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <Link to="/login?role=admin">
-                <Button className="bg-transparent hover:bg-white/10 text-white border border-white/20 text-[10px] font-bold tracking-[0.2em] uppercase px-4 py-3 h-full rounded-md shadow-md transition-all">
-                  Staff Login
-                </Button>
-              </Link>
               <Link to="/login?role=student">
                 <Button className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold tracking-[0.2em] uppercase px-4 py-3 h-full rounded-md shadow-lg shadow-red-600/20 transition-all hover:shadow-xl hover:-translate-y-0.5">
                   Student Portal
@@ -118,14 +113,6 @@ export default function Hero() {
                       >
                         <GraduationCap className="w-4 h-4 text-red-500" />
                         Student Portal
-                      </Link>
-                      <Link 
-                        to="/login?role=admin"
-                        onClick={() => setIsLoginDropdownOpen(false)}
-                        className="flex md:hidden items-center gap-2.5 px-3 py-2.5 border-t border-white/5 text-[9px] font-bold uppercase tracking-wider text-slate-200 hover:text-white hover:bg-white/10 transition-all"
-                      >
-                        <User className="w-4 h-4 text-slate-400" />
-                        Staff Login
                       </Link>
                     </div>
                   </motion.div>

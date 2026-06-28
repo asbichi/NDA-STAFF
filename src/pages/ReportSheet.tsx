@@ -30,15 +30,20 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
 interface Subject {
   name: string;
+  ca1: number;
+  ca2: number;
+  ca3: number;
+  ca4: number;
   ca: number;
   exam: number;
   total: number;
   grade: string;
   remark: string;
+  position?: string;
 }
 
 interface StudentReportData {
@@ -169,10 +174,14 @@ const SingleReport = React.forwardRef<HTMLDivElement, { data: StudentReportData,
         <TableHeader className="bg-primary">
           <TableRow className="hover:bg-primary border-b border-primary">
             <TableHead className="font-bold text-white py-1.5 px-3 text-[9px] tracking-widest uppercase">Subject</TableHead>
-            <TableHead className="font-bold text-white text-center w-16 py-1.5 text-[9px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>C.A</TableHead>
-            <TableHead className="font-bold text-white text-center w-16 py-1.5 text-[9px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>Exam</TableHead>
-            <TableHead className="font-bold text-white text-center w-16 py-1.5 text-[9px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>Total</TableHead>
-            <TableHead className="font-bold text-white text-center w-12 py-1.5 text-[9px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>Grd</TableHead>
+            <TableHead className="font-bold text-white text-center w-8 py-1.5 text-[7px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>CA1</TableHead>
+            <TableHead className="font-bold text-white text-center w-8 py-1.5 text-[7px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>CA2</TableHead>
+            <TableHead className="font-bold text-white text-center w-8 py-1.5 text-[7px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>CA3</TableHead>
+            <TableHead className="font-bold text-white text-center w-8 py-1.5 text-[7px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>CA4</TableHead>
+            <TableHead className="font-bold text-white text-center w-10 py-1.5 text-[7px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>Exam</TableHead>
+            <TableHead className="font-bold text-white text-center w-10 py-1.5 text-[7px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>Tot</TableHead>
+            <TableHead className="font-bold text-white text-center w-10 py-1.5 text-[7px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>Grd</TableHead>
+            <TableHead className="font-bold text-white text-center w-10 py-1.5 text-[7px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>Pos</TableHead>
             <TableHead className="font-bold text-white py-1.5 px-3 text-[9px] tracking-widest uppercase border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>Instructor Remark</TableHead>
           </TableRow>
         </TableHeader>
@@ -181,9 +190,12 @@ const SingleReport = React.forwardRef<HTMLDivElement, { data: StudentReportData,
             data.subjects.map((sub, idx) => (
               <TableRow key={idx} className="border-b transition-colors border-[#e2e8f0]">
                 <TableCell className="font-bold text-primary py-1 px-3 text-[11px]">{sub.name}</TableCell>
-                <TableCell className="text-center py-1 font-medium border-l border-[#e2e8f0] text-[11px] text-[#475569]">{sub.ca}</TableCell>
-                <TableCell className="text-center py-1 font-medium border-l border-[#e2e8f0] text-[11px] text-[#475569]">{sub.exam}</TableCell>
-                <TableCell className="text-center font-black text-primary py-1 border-l border-[#e2e8f0] bg-[#f9fafb] text-[11px]">{sub.total}</TableCell>
+                <TableCell className="text-center py-1 font-medium border-l border-[#e2e8f0] text-[9px] text-[#475569]">{sub.ca1 || '-'}</TableCell>
+                <TableCell className="text-center py-1 font-medium border-l border-[#e2e8f0] text-[9px] text-[#475569]">{sub.ca2 || '-'}</TableCell>
+                <TableCell className="text-center py-1 font-medium border-l border-[#e2e8f0] text-[9px] text-[#475569]">{sub.ca3 || '-'}</TableCell>
+                <TableCell className="text-center py-1 font-medium border-l border-[#e2e8f0] text-[9px] text-[#475569]">{sub.ca4 || '-'}</TableCell>
+                <TableCell className="text-center py-1 font-medium border-l border-[#e2e8f0] text-[10px] text-[#475569]">{sub.exam}</TableCell>
+                <TableCell className="text-center font-black text-primary py-1 border-l border-[#e2e8f0] bg-[#f9fafb] text-[10px]">{sub.total}</TableCell>
                 <TableCell className="text-center py-1 border-l border-[#e2e8f0]">
                   <span className="inline-flex items-center justify-center w-6 h-6 font-serif font-bold text-[10px] border" style={{
                     backgroundColor: sub.grade === 'A' ? '#ecfdf5' : sub.grade === 'B' ? '#eff6ff' : sub.grade === 'C' ? '#fffbeb' : sub.grade === 'D' ? '#fff7ed' : '#fff1f2',
@@ -193,15 +205,16 @@ const SingleReport = React.forwardRef<HTMLDivElement, { data: StudentReportData,
                     {sub.grade}
                   </span>
                 </TableCell>
+                <TableCell className="text-center font-bold text-amber-700 py-1 border-l border-[#e2e8f0] text-[10px]">{sub.position || '-'}</TableCell>
                 <TableCell className="text-[10px] italic py-1 px-3 border-l border-[#e2e8f0] text-[#64748b]">{sub.remark}</TableCell>
               </TableRow>
             ))
           ) : (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-[11px] font-bold uppercase tracking-widest text-[#94a3b8]">
-                No scores recorded for this student.
-              </TableCell>
-            </TableRow>
+          <TableRow>
+            <TableCell colSpan={10} className="text-center py-8 text-[11px] font-bold uppercase tracking-widest text-[#94a3b8]">
+              No scores recorded for this student.
+            </TableCell>
+          </TableRow>
           )}
         </TableBody>
       </Table>
@@ -392,7 +405,7 @@ const SingleReportPhone = ({ data }: { data: StudentReportData }) => {
                       transition={{ duration: 0.15 }}
                       className="overflow-hidden mt-2 pt-2 border-t border-slate-50"
                     >
-                      <div className="grid grid-cols-3 gap-1.5 text-center text-[9px] uppercase font-bold mb-2">
+                      <div className="grid grid-cols-4 gap-1 text-center text-[9px] uppercase font-bold mb-2">
                         <div className="p-1 bg-slate-50 rounded">
                           <span className="text-[7px] text-slate-400 block">CA</span>
                           <span className="text-slate-700">{sub.ca}</span>
@@ -404,6 +417,10 @@ const SingleReportPhone = ({ data }: { data: StudentReportData }) => {
                         <div className="p-1 bg-blue-50 border border-blue-100 rounded">
                           <span className="text-[7px] text-blue-400 block">Total</span>
                           <span className="text-primary font-black">{sub.total}</span>
+                        </div>
+                        <div className="p-1 bg-amber-50 border border-amber-100 rounded">
+                          <span className="text-[7px] text-amber-600 block">Pos</span>
+                          <span className="text-amber-800 font-black">{sub.position || '-'}</span>
                         </div>
                       </div>
 
@@ -620,6 +637,10 @@ export default function ReportSheet() {
         ) {
           subjects.push({
             name: data.subject || 'Unknown',
+            ca1: data.ca1 || 0,
+            ca2: data.ca2 || 0,
+            ca3: data.ca3 || 0,
+            ca4: data.ca4 || 0,
             ca: data.ca || 0,
             exam: data.exam || 0,
             total: data.total || 0,
@@ -633,6 +654,20 @@ export default function ReportSheet() {
     } catch (error) {
       console.error("Error fetching scores:", error);
       return [];
+    }
+  };
+
+  const fetchStudentAssessment = async (studentId: string) => {
+    try {
+      const docId = `${selectedSession.replace('/', '-')}_${selectedTerm}_${selectedClass}_${selectedArm}_${studentId}`;
+      const docRef = doc(db, 'term_assessments', docId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data();
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   };
 
@@ -669,28 +704,84 @@ export default function ReportSheet() {
 
       if (selectedStudent === 'all') {
         setIsBulkMode(true);
-        const reports = await Promise.all(currentStudents.sort((a: any, b: any) => a.name.localeCompare(b.name)).map(async (s: any, idx) => {
-          const subjects = await fetchStudentScores(s.id);
-          
-          const getOrdinal = (n: number) => {
-            const s = ["th", "st", "nd", "rd"];
-            const v = n % 100;
-            return n + (s[(v - 20) % 10] || s[v] || s[0]);
-          };
+        // Fetch all scores once for ranking calculation
+        const allScoresRef = collection(db, 'scores');
+        const allScoresSnap = await getDocs(allScoresRef);
+        const classScores: any[] = [];
+        allScoresSnap.docs.forEach(doc => {
+          const d = doc.data();
+          if (
+            d.session === selectedSession &&
+            d.term === selectedTerm &&
+            d.class === selectedClass &&
+            d.arm === selectedArm
+          ) {
+            classScores.push({ id: doc.id, ...d });
+          }
+        });
+
+        const getOrdinal = (n: number) => {
+          const str = ["th", "st", "nd", "rd"];
+          const v = n % 100;
+          return n + (str[(v - 20) % 10] || str[v] || str[0]);
+        };
+
+        const scoresBySubject: Record<string, number[]> = {};
+        classScores.forEach(sc => {
+          const sub = sc.subject || 'Unknown';
+          if (!scoresBySubject[sub]) scoresBySubject[sub] = [];
+          scoresBySubject[sub].push(sc.total || 0);
+        });
+        Object.keys(scoresBySubject).forEach(sub => {
+          scoresBySubject[sub].sort((a, b) => b - a);
+        });
+
+        const studentTotals: Record<string, number> = {};
+        currentStudents.forEach(s => {
+          const subs = classScores.filter(sc => sc.studentId === s.id);
+          studentTotals[s.id] = subs.reduce((sum, sc) => sum + (sc.total || 0), 0);
+        });
+        const sortedStudentsByScore = currentStudents.slice().sort((a: any, b: any) => (studentTotals[b.id] || 0) - (studentTotals[a.id] || 0));
+
+        const reports = await Promise.all(currentStudents.sort((a: any, b: any) => a.name.localeCompare(b.name)).map(async (s: any) => {
+          const sRecords = classScores.filter(sc => sc.studentId === s.id);
+          const subjects: Subject[] = sRecords.map(data => {
+            const tot = data.total || 0;
+            const subName = data.subject || 'Unknown';
+            const subScores = scoresBySubject[subName] || [];
+            const rankIdx = subScores.indexOf(tot);
+            return {
+              name: subName,
+              ca1: data.ca1 || 0,
+              ca2: data.ca2 || 0,
+              ca3: data.ca3 || 0,
+              ca4: data.ca4 || 0,
+              ca: data.ca || 0,
+              exam: data.exam || 0,
+              total: tot,
+              grade: data.grade || '-',
+              remark: calculateGrade(tot).remark,
+              position: rankIdx >= 0 ? getOrdinal(rankIdx + 1) : '-'
+            };
+          });
+
+          const assessment = await fetchStudentAssessment(s.id);
+          const overallRankIdx = sortedStudentsByScore.findIndex((x: any) => x.id === s.id);
+          const overallPosStr = overallRankIdx >= 0 && (studentTotals[s.id] > 0) ? getOrdinal(overallRankIdx + 1) : 'N/A';
 
           return {
-            name: s.name,
+            name: s.studentName || s.name,
             admissionNo: s.admissionNo,
             gender: s.gender,
             class: selectedClass,
             arm: selectedArm || 'A',
             term: selectedTerm,
             session: selectedSession,
-            attendance: `${getRandomInt(100, 116)}/116`,
-            position: getOrdinal(idx + 1),
+            attendance: assessment ? `${assessment.attendance || 0}/${assessment.schoolOpenDays || 120}` : 'N/A',
+            position: overallPosStr,
             subjects: subjects.length > 0 ? subjects : [],
-            teacherComment: subjects.length > 0 ? 'A very good performance. Keep it up.' : 'No assessment data available.',
-            principalComment: subjects.length > 0 ? 'Promising result. Approved.' : 'Incomplete record.',
+            teacherComment: assessment?.teacherComment || (subjects.length > 0 ? 'A very good performance. Keep it up.' : 'No assessment data available.'),
+            principalComment: assessment?.principalComment || (subjects.length > 0 ? 'Promising result. Approved.' : 'Incomplete record.'),
             passportPhoto: s.passportPhoto || ''
           };
         }));
@@ -698,22 +789,83 @@ export default function ReportSheet() {
         toast.success(`Generated reports for ${reports.length} students`);
       } else {
         setIsBulkMode(false);
+        const allScoresRef = collection(db, 'scores');
+        const allScoresSnap = await getDocs(allScoresRef);
+        const classScores: any[] = [];
+        allScoresSnap.docs.forEach(doc => {
+          const d = doc.data();
+          if (
+            d.session === selectedSession &&
+            d.term === selectedTerm &&
+            d.class === selectedClass &&
+            d.arm === selectedArm
+          ) {
+            classScores.push({ id: doc.id, ...d });
+          }
+        });
+
+        const getOrdinal = (n: number) => {
+          const str = ["th", "st", "nd", "rd"];
+          const v = n % 100;
+          return n + (str[(v - 20) % 10] || str[v] || str[0]);
+        };
+
+        const scoresBySubject: Record<string, number[]> = {};
+        classScores.forEach(sc => {
+          const sub = sc.subject || 'Unknown';
+          if (!scoresBySubject[sub]) scoresBySubject[sub] = [];
+          scoresBySubject[sub].push(sc.total || 0);
+        });
+        Object.keys(scoresBySubject).forEach(sub => {
+          scoresBySubject[sub].sort((a, b) => b - a);
+        });
+
+        const studentTotals: Record<string, number> = {};
+        currentStudents.forEach(s => {
+          const subs = classScores.filter(sc => sc.studentId === s.id);
+          studentTotals[s.id] = subs.reduce((sum, sc) => sum + (sc.total || 0), 0);
+        });
+        const sortedStudentsByScore = currentStudents.slice().sort((a: any, b: any) => (studentTotals[b.id] || 0) - (studentTotals[a.id] || 0));
+
         const student: any = currentStudents.find(s => s.id === selectedStudent);
-        const subjects = await fetchStudentScores(selectedStudent);
+        const sRecords = classScores.filter(sc => sc.studentId === selectedStudent);
+        const subjects: Subject[] = sRecords.map(data => {
+          const tot = data.total || 0;
+          const subName = data.subject || 'Unknown';
+          const subScores = scoresBySubject[subName] || [];
+          const rankIdx = subScores.indexOf(tot);
+          return {
+            name: subName,
+            ca1: data.ca1 || 0,
+            ca2: data.ca2 || 0,
+            ca3: data.ca3 || 0,
+            ca4: data.ca4 || 0,
+            ca: data.ca || 0,
+            exam: data.exam || 0,
+            total: tot,
+            grade: data.grade || '-',
+            remark: calculateGrade(tot).remark,
+            position: rankIdx >= 0 ? getOrdinal(rankIdx + 1) : '-'
+          };
+        });
+
+        const assessment = await fetchStudentAssessment(selectedStudent);
+        const overallRankIdx = sortedStudentsByScore.findIndex((x: any) => x.id === selectedStudent);
+        const overallPosStr = overallRankIdx >= 0 && (studentTotals[selectedStudent] > 0) ? getOrdinal(overallRankIdx + 1) : 'N/A';
         
         setStudentReports([{
-          name: student?.name || 'Unknown Student',
+          name: student?.studentName || student?.name || 'Unknown Student',
           admissionNo: student?.admissionNo || 'N/A',
           gender: student?.gender || 'N/A',
           class: selectedClass,
           arm: selectedArm || 'A',
           term: selectedTerm,
           session: selectedSession,
-          attendance: '112/116',
-          position: 'N/A', // Position calculation for single report would require comparing with entire class
+          attendance: assessment ? `${assessment.attendance || 0}/${assessment.schoolOpenDays || 120}` : 'N/A',
+          position: overallPosStr,
           subjects: subjects,
-          teacherComment: subjects.length > 0 ? 'Satisfactory performance.' : 'No data recorded.',
-          principalComment: subjects.length > 0 ? 'Good work. Please proceed.' : 'Admin attention required.',
+          teacherComment: assessment?.teacherComment || (subjects.length > 0 ? 'Satisfactory performance.' : 'No data recorded.'),
+          principalComment: assessment?.principalComment || (subjects.length > 0 ? 'Good work. Please proceed.' : 'Admin attention required.'),
           passportPhoto: student?.passportPhoto || ''
         }]);
         toast.success(`Generated report for ${student?.name || 'student'}`);
@@ -783,20 +935,55 @@ export default function ReportSheet() {
                 teacherComment: firstRow['TEACHER COMMENT'] || firstRow['Teacher Comment'] || 'N/A',
                 principalComment: firstRow['PRINCIPAL COMMENT'] || firstRow['Principal Comment'] || 'N/A',
                 subjects: studentRows.map(row => {
-                  const ca = Number(row['C.A'] || row['CA'] || row['ca'] || 0);
+                  const ca1 = Number(row['CA1'] || row['ca1'] || 0);
+                  const ca2 = Number(row['CA2'] || row['ca2'] || 0);
+                  const ca3 = Number(row['CA3'] || row['ca3'] || 0);
+                  const ca4 = Number(row['CA4'] || row['ca4'] || 0);
+                  let ca = Number(row['C.A'] || row['CA'] || row['ca'] || 0);
+                  if (ca === 0 && (ca1 > 0 || ca2 > 0 || ca3 > 0 || ca4 > 0)) {
+                    ca = ca1 + ca2 + ca3 + ca4;
+                  }
                   const exam = Number(row['EXAM'] || row['Exam'] || row['exam'] || 0);
                   const total = ca + exam;
                   const { grade, remark } = calculateGrade(total);
                   return {
                     name: row['SUBJECT'] || row['Subject'] || row['subject'] || 'Unknown',
+                    ca1,
+                    ca2,
+                    ca3,
+                    ca4,
                     ca,
                     exam,
                     total,
                     grade,
-                    remark
+                    remark,
+                    position: '-'
                   };
                 })
               };
+            });
+
+            // Calculate subject ranks for uploaded Excel reports
+            const uploadedSubjectScores: Record<string, number[]> = {};
+            reports.forEach(r => {
+              r.subjects.forEach(s => {
+                if (!uploadedSubjectScores[s.name]) uploadedSubjectScores[s.name] = [];
+                uploadedSubjectScores[s.name].push(s.total);
+              });
+            });
+            Object.keys(uploadedSubjectScores).forEach(sub => {
+              uploadedSubjectScores[sub].sort((a, b) => b - a);
+            });
+            const getOrd = (n: number) => {
+              const str = ["th", "st", "nd", "rd"];
+              const v = n % 100;
+              return n + (str[(v - 20) % 10] || str[v] || str[0]);
+            };
+            reports.forEach(r => {
+              r.subjects.forEach(s => {
+                const idx = (uploadedSubjectScores[s.name] || []).indexOf(s.total);
+                (s as any).position = idx >= 0 ? getOrd(idx + 1) : '-';
+              });
             });
 
             setStudentReports(reports);
@@ -957,7 +1144,8 @@ export default function ReportSheet() {
           'Total (100)': sub.total,
           'Grade': sub.grade,
           'Remark': sub.remark,
-          'Position': report.position,
+          'Course Position': sub.position || '-',
+          'Overall Class Position': report.position,
           'Attendance': report.attendance
         }))
       );

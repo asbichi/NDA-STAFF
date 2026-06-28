@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from 'sonner';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export default function AdminStudents() {
@@ -125,6 +125,7 @@ export default function AdminStudents() {
     try {
       await addDoc(collection(db, 'students'), {
         name,
+        studentName: name,
         admissionNo,
         class: studentClass,
         arm,
@@ -154,6 +155,7 @@ export default function AdminStudents() {
     try {
       await updateDoc(doc(db, 'students', selectedItem.id), {
         name,
+        studentName: name,
         admissionNo,
         class: studentClass,
         arm,
@@ -205,16 +207,44 @@ export default function AdminStudents() {
           <p className="text-slate-500 mt-1 font-light">Manage all enrolled students, their classes, and academic assignments.</p>
         </div>
         
-        <Button 
-          className="bg-primary hover:bg-primary/90 text-white rounded-none px-6 shadow-xl shadow-primary/20 transition-all font-bold uppercase text-[11px] tracking-widest" 
-          onClick={() => {
-            resetForm();
-            setIsAddOpen(true);
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Student
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline"
+            className="border-primary/20 text-primary hover:bg-primary/5 rounded-none px-4 font-bold uppercase text-[11px] tracking-widest"
+            onClick={async () => {
+              try {
+                const q = query(collection(db, 'students'));
+                const snap = await getDocs(q);
+                let count = 0;
+                for (const docSnap of snap.docs) {
+                  const data = docSnap.data();
+                  if (!data.studentName && data.name) {
+                    await updateDoc(doc(db, 'students', docSnap.id), { studentName: data.name });
+                    count++;
+                  } else if (data.studentName && !data.name) {
+                    await updateDoc(doc(db, 'students', docSnap.id), { name: data.studentName });
+                    count++;
+                  }
+                }
+                toast.success(`Updated ${count} student records with missing names`);
+              } catch (e) {
+                toast.error('Failed to fix records');
+              }
+            }}
+          >
+            Fix DB Names
+          </Button>
+          <Button 
+            className="bg-primary hover:bg-primary/90 text-white rounded-none px-6 shadow-xl shadow-primary/20 transition-all font-bold uppercase text-[11px] tracking-widest" 
+            onClick={() => {
+              resetForm();
+              setIsAddOpen(true);
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add New Student
+          </Button>
+        </div>
 
         <Dialog open={isAddOpen} onOpenChange={(open) => {
           setIsAddOpen(open);

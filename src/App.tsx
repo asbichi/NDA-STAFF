@@ -17,12 +17,17 @@ import CrudModule from './components/CrudModule';
 import ReportSheet from './pages/ReportSheet';
 import StudentResult from './pages/StudentResult';
 import ScoreEntry from './pages/ScoreEntry';
+import TermAssessment from './pages/TermAssessment';
 import AdminSettings from './pages/AdminSettings';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentReportView from './pages/StudentReportView';
 import Gallery from './pages/Gallery';
 import AdminGallery from './pages/AdminGallery';
 import { Toaster } from '@/components/ui/sonner';
+
+import AdminPTAPayments from './pages/AdminPTAPayments';
+import AdminBursary from './pages/AdminBursary';
+import AdminFinancialReports from './pages/AdminFinancialReports';
 
 // Mock Data & Columns for Modules
 const studentCols = [
@@ -138,7 +143,11 @@ function AnimatedRoutes() {
           <Route path="cbt" element={<PageWrapper><AdminCBT /></PageWrapper>} />
           <Route path="cbt-results" element={<PageWrapper><AdminCBTResults /></PageWrapper>} />
           <Route path="score-entry" element={<PageWrapper><ScoreEntry /></PageWrapper>} />
+          <Route path="term-assessment" element={<PageWrapper><TermAssessment /></PageWrapper>} />
           <Route path="gallery" element={<PageWrapper><AdminGallery /></PageWrapper>} />
+          <Route path="pta-payments" element={<PageWrapper><AdminPTAPayments /></PageWrapper>} />
+          <Route path="bursary" element={<PageWrapper><AdminBursary /></PageWrapper>} />
+          <Route path="financial-reports" element={<PageWrapper><AdminFinancialReports /></PageWrapper>} />
           <Route path="settings" element={<PageWrapper><AdminSettings /></PageWrapper>} />
         </Route>
         <Route path="/exam/:examId" element={<PageWrapper><CBTExam /></PageWrapper>} />

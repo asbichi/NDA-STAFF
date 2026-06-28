@@ -5,7 +5,7 @@ import {
   CreditCard, FileSpreadsheet, Calendar, BarChart3, 
   UserCircle, FileText, MonitorPlay, Settings, LogOut,
   Menu, Printer, FileEdit, Bell, Search, ChevronRight, Database,
-  UserPlus, Check, Trash2, Inbox, ChevronDown, ChevronUp, LayoutGrid
+  UserPlus, Check, Trash2, Inbox, ChevronDown, ChevronUp, LayoutGrid, ClipboardCheck, PieChart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -17,44 +17,32 @@ import { toast } from 'sonner';
 
 const sidebarGroups = [
   {
-    title: 'Main',
+    title: 'Overview',
     links: [
       { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     ]
   },
   {
-    title: 'CBT Examination',
-    links: [
-      { name: 'Question Databank', path: '/admin/cbt', icon: Database },
-      { name: 'Exams Setup', path: '/admin/exams', icon: GraduationCap },
-      { name: 'CBT Results', path: '/admin/cbt-results', icon: FileText },
-    ]
-  },
-  {
-    title: 'Termly Assessment',
-    links: [
-      { name: 'Manual Score Entry', path: '/admin/score-entry', icon: FileEdit },
-      { name: 'Report Sheet', path: '/admin/reports', icon: FileText },
-      { name: 'Bulk Reports', path: '/admin/bulk-reports', icon: Printer },
-      { name: 'Broad Sheet', path: '/admin/broad-sheet', icon: FileSpreadsheet },
-    ]
-  },
-  {
     title: 'Academic Records',
     links: [
-      { name: 'Student Module', path: '/admin/students', icon: Users },
-      { name: 'Class Module', path: '/admin/classes', icon: BookOpen },
-      { name: 'Time Table', path: '/admin/time-table', icon: Calendar },
-      { name: 'Analysis', path: '/admin/analysis', icon: BarChart3 },
+      { name: 'Students', path: '/admin/students', icon: Users },
+      { name: 'Score Entry', path: '/admin/score-entry', icon: FileEdit },
+      { name: 'Term Assessment', path: '/admin/term-assessment', icon: ClipboardCheck },
+      { name: 'Report Sheets', path: '/admin/reports', icon: FileText },
     ]
   },
   {
-    title: 'Management',
+    title: 'Exams & Assessment',
     links: [
-      { name: 'Fees Module', path: '/admin/fees', icon: CreditCard },
-      { name: 'Parent Module', path: '/admin/parents', icon: UserCircle },
-      { name: 'Gallery Module', path: '/admin/gallery', icon: LayoutGrid },
-      { name: 'Settings', path: '/admin/settings', icon: Settings },
+      { name: 'CBT Databank', path: '/admin/cbt', icon: Database },
+      { name: 'CBT Results', path: '/admin/cbt-results', icon: MonitorPlay },
+    ]
+  },
+  {
+    title: 'Administration',
+    links: [
+      { name: 'School Gallery', path: '/admin/gallery', icon: LayoutGrid },
+      { name: 'System Settings', path: '/admin/settings', icon: Settings },
     ]
   }
 ];
@@ -91,6 +79,49 @@ export default function AdminLayout() {
   useEffect(() => {
     localStorage.setItem('admin_dismissed_notifications', JSON.stringify(dismissedIds));
   }, [dismissedIds]);
+
+  const adminRole = localStorage.getItem('admin_role') || 'admin';
+
+  const filteredSidebarGroups = sidebarGroups.map(group => {
+    if (adminRole === 'pta_financial_secretary') {
+      if (group.title === 'Overview') {
+        return {
+          ...group,
+          links: [
+            { name: 'PTA Payments', path: '/admin/pta-payments', icon: CreditCard }
+          ]
+        };
+      }
+      return { ...group, links: [] };
+    }
+
+    if (adminRole === 'bursar') {
+      if (group.title === 'Overview') {
+        return {
+          ...group,
+          links: [
+            { name: 'Bursary', path: '/admin/bursary', icon: CreditCard },
+            { name: 'Financial Overview', path: '/admin/financial-reports', icon: PieChart }
+          ]
+        };
+      }
+      return { ...group, links: [] };
+    }
+    
+    // For regular admins, add PTA payments, Bursary, and Financial Reports to Administration or similar
+    if (group.title === 'Administration') {
+      return {
+        ...group,
+        links: [
+          ...group.links,
+          { name: 'PTA Payments', path: '/admin/pta-payments', icon: CreditCard },
+          { name: 'Bursary', path: '/admin/bursary', icon: CreditCard },
+          { name: 'Financial Overview', path: '/admin/financial-reports', icon: PieChart }
+        ]
+      };
+    }
+    return group;
+  }).filter(group => group.links.length > 0);
 
   // Click outside to close notification or quick nav dropdowns
   useEffect(() => {
@@ -265,9 +296,9 @@ export default function AdminLayout() {
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="py-8 px-6 space-y-10">
-          {sidebarGroups.map((group) => (
-            <div key={group.title} className="space-y-4">
-              <h3 className="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+          {filteredSidebarGroups.map((group) => (
+            <div key={group.title} className="space-y-3">
+              <h3 className="px-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 {group.title}
               </h3>
               <nav className="space-y-1">
@@ -278,17 +309,17 @@ export default function AdminLayout() {
                     <Link
                       key={link.path}
                       to={link.path}
-                      className={`flex items-center justify-between px-4 py-2.5 rounded-none transition-all duration-300 group ${
+                      className={`flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 group ${
                         isActive 
-                          ? 'bg-accent text-primary shadow-xl shadow-accent/10' 
-                          : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                          ? 'bg-blue-600 text-white font-semibold shadow-sm' 
+                          : 'text-slate-400 hover:bg-slate-800/80 hover:text-white'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                        <span className="text-[11px] font-bold uppercase tracking-widest">{link.name}</span>
+                        <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`} />
+                        <span className="text-sm tracking-normal">{link.name}</span>
                       </div>
-                      {isActive && <ChevronRight className="w-3 h-3" />}
+                      {isActive && <ChevronRight className="w-4 h-4 text-white/80" />}
                     </Link>
                   );
                 })}
@@ -382,7 +413,7 @@ export default function AdminLayout() {
 
                     {/* Navigation Icons Grid */}
                     <div className="p-3 bg-white grid grid-cols-3 gap-2 max-h-[360px] overflow-y-auto custom-scrollbar">
-                      {sidebarGroups.flatMap(group => group.links).map((link) => {
+                      {filteredSidebarGroups.flatMap(group => group.links).map((link) => {
                         const Icon = link.icon;
                         const isActive = location.pathname === link.path;
                         return (
@@ -390,14 +421,14 @@ export default function AdminLayout() {
                             key={link.path}
                             to={link.path}
                             onClick={() => setIsNavDropdownOpen(false)}
-                            className={`flex flex-col items-center justify-center p-3 border rounded-none transition-all duration-300 group ${
+                            className={`flex flex-col items-center justify-center p-3 border rounded-lg transition-all duration-200 group ${
                               isActive 
-                                ? 'bg-primary border-primary text-white shadow-md' 
-                                : 'bg-slate-50/50 border-slate-100 text-slate-600 hover:bg-slate-50 hover:border-slate-200 hover:text-primary'
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/20' 
+                                : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100 hover:border-slate-300 hover:text-blue-600'
                             }`}
                           >
-                            <Icon className={`w-5 h-5 mb-2 transition-transform duration-300 ${isActive ? 'scale-110 text-accent' : 'text-slate-400 group-hover:scale-110 group-hover:text-primary'}`} />
-                            <span className={`text-[8px] font-bold uppercase tracking-wider text-center line-clamp-1 w-full ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-primary'}`}>
+                            <Icon className={`w-5 h-5 mb-2 transition-transform duration-200 ${isActive ? 'text-white scale-110' : 'text-slate-400 group-hover:scale-110 group-hover:text-blue-600'}`} />
+                            <span className={`text-[9px] font-semibold uppercase tracking-wider text-center line-clamp-1 w-full ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-600'}`}>
                               {link.name}
                             </span>
                           </Link>

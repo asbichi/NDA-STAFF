@@ -1,7 +1,7 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Timer, ChevronLeft, ChevronRight, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Timer, ChevronLeft, ChevronRight, Send, AlertCircle, CheckCircle2, User, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -29,9 +29,15 @@ export default function CBTExam() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [timeLeft, setTimeLeft] = useState(3600); // 1 hour in seconds
+  const [timeLeft, setTimeLeft] = useState(7200); // 2 hours for UTME mock
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const [isExamStarted, setIsExamStarted] = useState(false);
+
+  const studentSession = JSON.parse(localStorage.getItem('student_session') || '{}');
+  const candidateName = studentSession.name || 'CANDIDATE NAME';
+  const regNumber = studentSession.regNo || 'REG NUMBER';
 
   // Derive subjects from questions
   const subjects = Array.from(new Set(questions.map(q => q.subject)));
@@ -53,7 +59,7 @@ export default function CBTExam() {
         { text: 'Fill in the gap: Hard work is a prerequisite _____ success.', options: { A: 'for', B: 'to', C: 'of', D: 'in' }, correctAnswer: 'B' }
       ],
       'Mathematics': [
-        { text: 'If log₁₀2 = 0.3010 and log₁₀3 = 0.4771, evaluate log₁₀12.', options: { A: '1.0791', B: '1.7781', C: '0.7781', D: '1.3010' }, correctAnswer: '1.0791' }, // Oops, let me just fix options so one is correct
+        { text: 'If log₁₀2 = 0.3010 and log₁₀3 = 0.4771, evaluate log₁₀12.', options: { A: '1.0791', B: '1.7781', C: '0.7781', D: '1.3010' }, correctAnswer: 'A' },
         { text: 'A polygon has 9 sides. What is the sum of its interior angles?', options: { A: '1260°', B: '1440°', C: '1620°', D: '1080°' }, correctAnswer: 'A' },
         { text: 'Simplify: (8⅓ × 27⅓) ÷ 64⅓', options: { A: '1.5', B: '2.5', C: '3.5', D: '4.5' }, correctAnswer: 'A' },
         { text: 'Find the derivative of y = 3x² + 5x - 4 with respect to x.', options: { A: '6x', B: '6x + 5', C: '3x + 5', D: '6x - 4' }, correctAnswer: 'B' },
@@ -94,12 +100,12 @@ export default function CBTExam() {
     let idCounter = 1;
 
     Object.entries(subjectData).forEach(([subject, qs]) => {
-      // Create 10 questions per subject
-      for (let i = 0; i < 10; i++) {
+      // Create 150 questions per subject for JAMB CBT standard
+      for (let i = 0; i < 150; i++) {
         const base = qs[i % qs.length];
         mockQuestions.push({
           id: idCounter.toString(),
-          text: base.text, // Removed [Subject] prefix for cleaner UI as subject is in header
+          text: base.text,
           options: base.options,
           correctAnswer: base.correctAnswer,
           subject: subject
@@ -114,6 +120,11 @@ export default function CBTExam() {
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitted) return;
+    
+    if (timeLeft > 0 && !window.confirm('Are you sure you want to submit? You still have time left.')) {
+      return;
+    }
+
     setIsSubmitted(true);
     
     // Calculate score
@@ -124,7 +135,6 @@ export default function CBTExam() {
     const percentage = Math.round((score / questions.length) * 100);
 
     try {
-      const studentSession = JSON.parse(localStorage.getItem('student_session') || '{}');
       const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
       const { db } = await import('../firebase');
       
@@ -138,9 +148,19 @@ export default function CBTExam() {
         date: serverTimestamp()
       });
       
+      const subjectScores: Record<string, { score: number, total: number }> = {};
+      subjects.forEach(sub => {
+        const subQuestions = questions.filter(q => q.subject === sub);
+        let subScore = 0;
+        subQuestions.forEach(q => {
+          if (answers[q.id] === q.correctAnswer) subScore++;
+        });
+        subjectScores[sub] = { score: subScore, total: subQuestions.length };
+      });
+
       toast.success('Examination submitted successfully!');
       setTimeout(() => {
-        navigate('/result', { state: { submitted: true } });
+        navigate('/result', { state: { submitted: true, score, total: questions.length, subjectScores } });
       }, 2000);
     } catch (error) {
       console.error("Error saving CBT result:", error);
@@ -149,20 +169,45 @@ export default function CBTExam() {
         navigate('/result', { state: { submitted: true } });
       }, 2000);
     }
-  }, [isSubmitted, navigate, questions, answers]);
+  }, [isSubmitted, navigate, questions, answers, studentSession, timeLeft]);
 
   useEffect(() => {
-    if (timeLeft <= 0) {
+    if (!isExamStarted) return;
+    
+    if (timeLeft <= 0 && !isSubmitted) {
       handleSubmit();
       return;
     }
 
     const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+      setTimeLeft(prev => prev > 0 ? prev - 1 : 0);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, handleSubmit]);
+  }, [timeLeft, handleSubmit, isSubmitted, isExamStarted]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isSubmitted || !isExamStarted) return;
+      const key = e.key.toUpperCase();
+      
+      const currentQ = questions[currentQuestionIndex];
+      if (!currentQ) return;
+
+      if (['A', 'B', 'C', 'D'].includes(key) && currentQ.options[key]) {
+        setAnswers(prev => ({ ...prev, [currentQ.id]: key }));
+      } else if (key === 'N' || key === 'ArrowRight') {
+        setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1));
+      } else if (key === 'P' || key === 'ArrowLeft') {
+        setCurrentQuestionIndex(prev => Math.max(0, prev - 1));
+      } else if (key === 'S') {
+        // Optional submit shortcut could be too dangerous to put on 'S' natively, let's leave S out.
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentQuestionIndex, questions, isSubmitted]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -176,149 +221,232 @@ export default function CBTExam() {
   // Scoped to current subject
   const currentSubjectQuestions = questions.filter(q => q.subject === currentSubject);
   const currentSubjectIndex = currentSubjectQuestions.findIndex(q => q.id === currentQuestion?.id);
-  const progress = ((currentSubjectIndex + 1) / currentSubjectQuestions.length) * 100;
 
-  if (loading || !currentQuestion) return <div className="min-h-screen flex items-center justify-center">Loading exam...</div>;
+  if (loading || !currentQuestion) return <div className="min-h-screen bg-green-50 flex items-center justify-center">Loading examination engine...</div>;
+
+  if (!isExamStarted) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-sans p-6">
+        <Card className="w-full max-w-4xl border-t-4 border-t-green-700 shadow-2xl bg-white rounded-none">
+          <CardHeader className="bg-green-50 border-b border-green-200 py-6 px-8 text-center flex flex-col items-center">
+            <img src={LOGO_BASE64} alt="JAMB Logo" className="w-20 h-20 mb-4" />
+            <CardTitle className="text-2xl font-black text-green-900 tracking-tight uppercase">
+              Joint Admissions and Matriculation Board
+            </CardTitle>
+            <p className="text-green-800 font-bold uppercase tracking-widest mt-2 text-sm">Unified Tertiary Matriculation Examination</p>
+          </CardHeader>
+          <CardContent className="p-8 space-y-6">
+            <div className="bg-blue-50 border-l-4 border-blue-600 p-4">
+              <h3 className="font-bold text-blue-900 uppercase text-sm mb-1">Candidate Biodata</h3>
+              <p className="font-bold text-lg">{candidateName}</p>
+              <p className="font-mono text-slate-600 font-medium">{regNumber}</p>
+            </div>
+            
+            <div className="space-y-4">
+              <h4 className="font-bold text-slate-800 uppercase text-sm border-b pb-2">Examination Instructions</h4>
+              <ul className="list-disc pl-5 space-y-3 text-slate-700 text-sm md:text-base leading-relaxed">
+                <li>This examination consists of four (4) subjects. Use the Subject Navigator to switch between subjects.</li>
+                <li>You have a total of <b>2 Hours</b> to complete all questions.</li>
+                <li>You can use the <b>Next</b> and <b>Previous</b> buttons to navigate through questions.</li>
+                <li>Alternatively, you can use keyboard shortcuts: <b>A, B, C, D</b> to select answers, and <b>N</b> (Next) / <b>P</b> (Previous) to navigate.</li>
+                <li>An on-screen calculator is available at the top right of the screen.</li>
+                <li>Ensure you click on <b>Submit Examination</b> only when you are completely done.</li>
+              </ul>
+            </div>
+          </CardContent>
+          <CardFooter className="bg-slate-50 border-t p-6 flex justify-center">
+            <Button 
+              onClick={() => setIsExamStarted(true)}
+              className="bg-green-700 hover:bg-green-800 text-white font-bold py-6 px-12 text-lg uppercase tracking-widest rounded shadow-lg"
+            >
+              Start Examination
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-primary text-white p-4 shadow-md flex flex-col sm:flex-row justify-between items-center gap-3 sticky top-0 z-20">
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
-          <div className="flex items-center gap-3">
-            <img src={LOGO_BASE64} alt="Logo" className="w-10 h-10 bg-white rounded-full p-1 shrink-0" />
+    <div className="min-h-screen bg-gray-100 flex flex-col font-sans selection:bg-green-200">
+      {/* Header - JAMB Style Green */}
+      <header className="bg-green-800 text-white shadow-md border-b-4 border-green-600 sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+          
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-1 rounded">
+              <img src={LOGO_BASE64} alt="JAMB Logo" className="w-12 h-12 md:w-14 md:h-14 object-contain" />
+            </div>
             <div>
-              <h1 className="font-bold text-base sm:text-lg leading-tight">CBT EXAMINATION</h1>
-              <p className="text-[10px] sm:text-xs text-blue-200">Class: SS3</p>
+              <h1 className="font-bold text-lg md:text-xl tracking-tight uppercase">Joint Admissions and Matriculation Board</h1>
+              <p className="text-green-200 text-xs md:text-sm font-medium tracking-wider">UNIFIED TERTIARY MATRICULATION EXAMINATION</p>
             </div>
           </div>
-          {/* Mobile timer */}
-          <div className={`flex sm:hidden items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-base ${timeLeft < 300 ? 'bg-red-600 animate-pulse' : 'bg-blue-900'}`}>
-            <Timer className="w-4 h-4" />
-            {formatTime(timeLeft)}
+
+          {/* Time & Tools Display */}
+          <div className="flex flex-col items-center md:items-end">
+            <div className="flex items-center gap-4">
+              <Button onClick={() => alert('JAMB Calculator launched!')} variant="outline" className="bg-white text-green-800 border-none hover:bg-green-50 shadow-sm hidden md:flex font-bold">
+                <Calculator className="w-4 h-4 mr-2" />
+                Calculator
+              </Button>
+              <div className="flex flex-col items-center md:items-end">
+                <span className="text-xs text-green-200 uppercase font-bold tracking-widest mb-1">Time Remaining</span>
+                <div className={`flex items-center gap-2 px-6 py-2 rounded shadow-inner font-mono text-2xl md:text-3xl font-bold border-2 ${timeLeft < 300 ? 'bg-red-700 border-red-500 animate-pulse' : 'bg-black text-green-400 border-green-900'}`}>
+                  <Timer className="w-6 h-6 text-current opacity-70" />
+                  {formatTime(timeLeft)}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Desktop timer */}
-        <div className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xl ${timeLeft < 300 ? 'bg-red-600 animate-pulse' : 'bg-blue-900'}`}>
-          <Timer className="w-5 h-5" />
-          {formatTime(timeLeft)}
         </div>
-
-        <Button variant="destructive" onClick={handleSubmit} disabled={isSubmitted} className="w-full sm:w-auto font-bold uppercase tracking-widest text-xs py-2.5 h-auto">
-          SUBMIT EXAM
-        </Button>
       </header>
 
-      {/* Subject Tabs */}
-      <div className="bg-white border-b shadow-sm relative sm:sticky sm:top-[72px] z-10">
-        <div className="max-w-7xl mx-auto flex overflow-x-auto hide-scrollbar">
-          {subjects.map(subject => {
-            const subjectQuestions = questions.filter(q => q.subject === subject);
-            const answeredCount = subjectQuestions.filter(q => answers[q.id]).length;
-            
-            return (
-              <button
-                key={subject}
-                onClick={() => {
-                  const firstIndex = questions.findIndex(q => q.subject === subject);
-                  setCurrentQuestionIndex(firstIndex);
-                }}
-                className={`flex-none px-6 py-3 font-medium text-sm border-b-[3px] transition-colors whitespace-nowrap flex items-center gap-2 ${
-                  currentSubject === subject 
-                    ? 'border-blue-600 text-blue-700 bg-blue-50/50' 
-                    : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                }`}
-              >
-                <span>{subject}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${answeredCount === subjectQuestions.length ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                  {answeredCount}/{subjectQuestions.length}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 max-w-7xl mx-auto w-full">
-        {/* Main Question Area */}
-        <div className="flex-1 flex flex-col gap-6">
-          <Card className="border-none shadow-lg">
-            <CardHeader className="border-b bg-white">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider">
-                  {currentSubject} - Q{currentSubjectIndex + 1} of {currentSubjectQuestions.length}
-                </span>
-                <Progress value={progress} className="w-1/3 h-2" />
-              </div>
-              <CardTitle className="text-xl md:text-2xl font-medium leading-relaxed">
-                {currentQuestion.text.replace(/^\[.*?\]\s*/, '')}
-              </CardTitle>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full p-2 md:p-4 gap-4">
+        
+        {/* Left Sidebar - Candidate Details */}
+        <div className="w-full md:w-64 flex flex-col gap-4">
+          <Card className="rounded-none border-t-4 border-t-green-700 shadow-md">
+            <CardHeader className="bg-gray-50 border-b py-3 px-4">
+              <CardTitle className="text-sm font-bold text-gray-700 uppercase">Candidate Details</CardTitle>
             </CardHeader>
-            <CardContent className="p-8">
-              <RadioGroup 
-                value={answers[currentQuestion.id]} 
-                onValueChange={(val) => setAnswers(prev => ({ ...prev, [currentQuestion.id]: val }))}
-                className="grid gap-4"
-              >
-                {Object.entries(currentQuestion.options).map(([key, value]) => (
-                  <Label
-                    key={key}
-                    className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-blue-50 ${
-                      answers[currentQuestion.id] === key ? 'border-blue-600 bg-blue-50 shadow-sm' : 'border-slate-100'
-                    }`}
-                  >
-                    <RadioGroupItem value={key} id={`q-${currentQuestion.id}-${key}`} className="sr-only" />
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${
-                      answers[currentQuestion.id] === key ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 text-slate-400'
-                    }`}>
-                      {key}
-                    </div>
-                    <span className="text-lg text-slate-700">{value}</span>
-                  </Label>
-                ))}
-              </RadioGroup>
+            <CardContent className="p-4 flex flex-col items-center text-center gap-3">
+              <div className="w-24 h-24 bg-gray-200 border-4 border-white shadow flex items-center justify-center text-gray-400">
+                <User className="w-12 h-12" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 uppercase">{candidateName}</p>
+                <p className="text-sm font-mono text-gray-500">{regNumber}</p>
+              </div>
             </CardContent>
-            <CardFooter className="flex justify-between p-6 bg-slate-50/50 border-t">
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
-                disabled={currentQuestionIndex === 0 || questions[currentQuestionIndex - 1]?.subject !== currentSubject}
-                className="gap-2"
-              >
-                <ChevronLeft className="w-4 h-4" /> Previous
-              </Button>
-              <Button 
-                onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-                disabled={currentQuestionIndex === questions.length - 1 || questions[currentQuestionIndex + 1]?.subject !== currentSubject}
-                className="bg-blue-600 hover:bg-blue-700 gap-2"
-              >
-                Next <ChevronRight className="w-4 h-4" />
-              </Button>
-            </CardFooter>
+          </Card>
+
+          {/* Subject Navigation Tabs */}
+          <Card className="rounded-none border-t-4 border-t-blue-700 shadow-md flex-1">
+            <CardHeader className="bg-gray-50 border-b py-3 px-4">
+              <CardTitle className="text-sm font-bold text-gray-700 uppercase">Subjects</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="flex flex-col">
+                {subjects.map((subject, idx) => {
+                  const subjectQuestions = questions.filter(q => q.subject === subject);
+                  const answeredCount = subjectQuestions.filter(q => answers[q.id]).length;
+                  const isActive = currentSubject === subject;
+                  
+                  return (
+                    <button
+                      key={subject}
+                      onClick={() => {
+                        const firstIndex = questions.findIndex(q => q.subject === subject);
+                        setCurrentQuestionIndex(firstIndex);
+                      }}
+                      className={`px-4 py-3 text-left border-b text-sm font-bold flex justify-between items-center transition-colors ${
+                        isActive 
+                          ? 'bg-blue-50 border-l-4 border-l-blue-600 text-blue-800' 
+                          : 'hover:bg-gray-50 border-l-4 border-l-transparent text-gray-600'
+                      }`}
+                    >
+                      <span>{idx + 1}. {subject}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-mono ${answeredCount === subjectQuestions.length ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                        {answeredCount}/{subjectQuestions.length}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </CardContent>
           </Card>
         </div>
 
-        {/* Navigation Sidebar */}
-        <div className="w-full md:w-80 flex flex-col gap-6">
-          <Card className="border-none shadow-lg sticky top-36">
-            <CardHeader className="bg-white border-b">
-              <CardTitle className="text-sm font-bold text-slate-500 uppercase">{currentSubject} Navigator</CardTitle>
+        {/* Center - Question Area */}
+        <div className="flex-1 flex flex-col gap-4">
+          <Card className="flex-1 rounded-none border border-gray-300 shadow-md flex flex-col">
+            
+            <div className="bg-gray-100 border-b border-gray-300 p-3 flex justify-between items-center">
+              <span className="font-bold text-gray-800 uppercase text-lg">
+                {currentSubject}
+              </span>
+              <span className="bg-white border border-gray-300 px-3 py-1 text-sm font-bold text-gray-600 rounded-sm shadow-sm">
+                Question {currentSubjectIndex + 1} of {currentSubjectQuestions.length}
+              </span>
+            </div>
+
+            <CardContent className="p-6 flex-1 bg-white flex flex-col">
+              <div className="text-lg md:text-xl font-medium text-black mb-8 leading-relaxed">
+                {currentQuestion.text}
+              </div>
+
+              <div className="space-y-3 mt-auto">
+                <RadioGroup 
+                  value={answers[currentQuestion.id] || ""} 
+                  onValueChange={(val) => setAnswers(prev => ({ ...prev, [currentQuestion.id]: val }))}
+                >
+                  {Object.entries(currentQuestion.options).map(([key, value]) => (
+                    <div key={key} className="flex items-center space-x-3 mb-4">
+                      <RadioGroupItem 
+                        value={key} 
+                        id={`option-${key}`} 
+                        className="w-5 h-5 text-green-600 border-gray-400 focus:ring-green-600"
+                      />
+                      <Label 
+                        htmlFor={`option-${key}`} 
+                        className="text-base font-normal cursor-pointer text-gray-800 leading-tight"
+                      >
+                        <span className="font-bold mr-2">{key}.</span> {value}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            </CardContent>
+            
+            {/* Navigation Controls */}
+            <div className="bg-gray-100 border-t border-gray-300 p-4 flex justify-between items-center">
+              <Button 
+                variant="outline"
+                onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+                disabled={currentQuestionIndex === 0}
+                className="bg-white border-gray-400 text-gray-800 hover:bg-gray-50 rounded-sm font-bold min-w-[120px]"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+              </Button>
+              
+              <Button 
+                onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+                disabled={currentQuestionIndex === questions.length - 1}
+                className="bg-blue-700 hover:bg-blue-800 text-white rounded-sm font-bold min-w-[120px] shadow-sm"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Right Sidebar - Question Grid & Submit */}
+        <div className="w-full md:w-72 flex flex-col gap-4">
+          <Card className="rounded-none border border-gray-300 shadow-md bg-white">
+            <CardHeader className="bg-gray-100 border-b border-gray-300 py-3 px-4">
+              <CardTitle className="text-sm font-bold text-gray-700 uppercase">Question Navigator</CardTitle>
             </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-5 gap-2">
+            <CardContent className="p-3">
+              <div className="grid grid-cols-5 gap-1.5 max-h-[300px] overflow-y-auto pr-1">
                 {currentSubjectQuestions.map((q, idx) => {
                   const globalIdx = questions.findIndex(globalQ => globalQ.id === q.id);
+                  const isAnswered = !!answers[q.id];
+                  const isCurrent = currentQuestionIndex === globalIdx;
+                  
                   return (
                     <button
                       key={q.id}
                       onClick={() => setCurrentQuestionIndex(globalIdx)}
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold transition-all ${
-                        currentQuestionIndex === globalIdx 
-                          ? 'bg-blue-600 text-white shadow-md scale-110 z-10' 
-                          : answers[q.id] 
-                            ? 'bg-green-100 text-green-700 border border-green-200' 
-                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                      className={`h-9 w-full rounded-sm flex items-center justify-center text-sm font-bold transition-all border ${
+                        isCurrent 
+                          ? 'bg-blue-600 text-white border-blue-800 ring-2 ring-blue-300 ring-offset-1' 
+                          : isAnswered 
+                            ? 'bg-green-600 text-white border-green-700' 
+                            : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'
                       }`}
                     >
                       {idx + 1}
@@ -327,33 +455,37 @@ export default function CBTExam() {
                 })}
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4 p-4 border-t bg-slate-50/50">
-              <div className="flex items-center gap-4 text-xs font-medium w-full">
-                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded-full"></div> Answered</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-slate-300 rounded-full"></div> Unanswered</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-600 rounded-full"></div> Current</div>
-              </div>
-              <Button className="w-full bg-green-600 hover:bg-green-700 mt-4" onClick={handleSubmit}>
-                <Send className="w-4 h-4 mr-2" /> Final Submission
-              </Button>
-            </CardFooter>
+            <div className="bg-gray-50 border-t border-gray-200 p-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] uppercase font-bold text-gray-500">
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-600 border border-green-700 rounded-sm"></div> Answered</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-white border border-gray-300 rounded-sm"></div> Unanswered</div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-600 border border-blue-800 rounded-sm"></div> Current</div>
+            </div>
           </Card>
+
+          <Button 
+            onClick={handleSubmit}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-lg uppercase tracking-wider py-6 rounded-none shadow-md mt-auto"
+          >
+            Submit Examination
+          </Button>
         </div>
+
       </div>
 
       {isSubmitted && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-6">
-          <Card className="max-w-md w-full text-center p-8 animate-in zoom-in duration-300">
+        <div className="fixed inset-0 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+          <Card className="max-w-md w-full text-center p-8 border-none rounded shadow-2xl">
             <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-12 h-12" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Exam Submitted!</h2>
-            <p className="text-slate-500 mb-6">Your responses have been recorded. Redirecting to results...</p>
-            <Progress value={100} className="h-1 animate-pulse" />
+            <h2 className="text-2xl font-bold mb-2 text-gray-800 uppercase">Exam Submitted</h2>
+            <p className="text-gray-500 mb-6 font-medium">Your responses have been recorded securely. Redirecting to results...</p>
+            <Progress value={100} className="h-1.5 bg-gray-200 [&>div]:bg-green-600 animate-pulse" />
           </Card>
         </div>
       )}
     </div>
   );
 }
+
 

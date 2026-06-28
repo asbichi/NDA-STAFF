@@ -1,27 +1,46 @@
 import { LOGO_BASE64 } from "@/src/logoBase64";
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, Printer, Download, Loader2, 
-  Award, User, Calendar, BookOpen, ShieldCheck,
-  Smartphone, FileText, CheckCircle2, ChevronRight, Sparkles, BookCheck, ClipboardList,
-  ChevronDown, ChevronUp
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner';
-import { db } from '../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import html2pdf from 'html2pdf.js';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  Printer,
+  Download,
+  Loader2,
+  Award,
+  User,
+  Calendar,
+  BookOpen,
+  ShieldCheck,
+  Smartphone,
+  FileText,
+  CheckCircle2,
+  ChevronRight,
+  Sparkles,
+  BookCheck,
+  ClipboardList,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
+import { db } from "../firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import html2pdf from "html2pdf.js";
 
 interface Subject {
   name: string;
+  ca1: number;
+  ca2: number;
+  ca3: number;
+  ca4: number;
   ca: number;
   exam: number;
   total: number;
   grade: string;
   remark: string;
+  position?: string;
 }
 
 interface StudentReportData {
@@ -32,7 +51,8 @@ interface StudentReportData {
   term: string;
   session: string;
   gender: string;
-  attendance: string;
+  daysPresent: number;
+  daysAbsent: number;
   position: string;
   subjects: Subject[];
   teacherComment: string;
@@ -42,25 +62,25 @@ interface StudentReportData {
 function oklabToRgb(L: number, a: number, b: number, alpha: number): string {
   const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
   const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
-  
+  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+
   const l3 = l_ * l_ * l_;
   const m3 = m_ * m_ * m_;
   const s3 = s_ * s_ * s_;
-  
+
   const r = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
   const g = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
-  const b_ = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
-  
+  const b_ = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.707614701 * s3;
+
   const toSRGB = (c: number) => {
     if (c <= 0.0031308) return 12.92 * c;
     return 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
   };
-  
+
   const sR = Math.max(0, Math.min(255, Math.round(toSRGB(r) * 255)));
   const sG = Math.max(0, Math.min(255, Math.round(toSRGB(g) * 255)));
   const sB = Math.max(0, Math.min(255, Math.round(toSRGB(b_) * 255)));
-  
+
   if (alpha === 1) {
     return `rgb(${sR}, ${sG}, ${sB})`;
   } else {
@@ -69,75 +89,78 @@ function oklabToRgb(L: number, a: number, b: number, alpha: number): string {
 }
 
 function convertModernColors(str: any): any {
-  if (typeof str !== 'string') return str;
-  if (!str.includes('oklch') && !str.includes('oklab')) return str;
-  
+  if (typeof str !== "string") return str;
+  if (!str.includes("oklch") && !str.includes("oklab")) return str;
+
   let result = str.replace(/oklch\(([^)]+)\)/gi, (match, content) => {
     try {
       const parts = content.trim().split(/[\s,+/]+/);
-      if (parts.length < 3) return 'rgb(0,0,0)';
-      
+      if (parts.length < 3) return "rgb(0,0,0)";
+
       let L = parseFloat(parts[0]);
       if (isNaN(L)) L = 0;
-      if (parts[0] && parts[0].includes('%')) L = L / 100;
-      
+      if (parts[0] && parts[0].includes("%")) L = L / 100;
+
       let C = parseFloat(parts[1]);
       if (isNaN(C)) C = 0;
-      if (parts[1] && parts[1].includes('%')) C = C / 100;
-      
+      if (parts[1] && parts[1].includes("%")) C = C / 100;
+
       let H = parseFloat(parts[2]);
       if (isNaN(H)) H = 0;
       if (parts[2]) {
-        if (parts[2].includes('deg')) H = parseFloat(parts[2].replace('deg', ''));
-        if (parts[2].includes('rad')) H = parseFloat(parts[2].replace('rad', '')) * (180 / Math.PI);
-        if (parts[2].includes('turn')) H = parseFloat(parts[2].replace('turn', '')) * 360;
+        if (parts[2].includes("deg"))
+          H = parseFloat(parts[2].replace("deg", ""));
+        if (parts[2].includes("rad"))
+          H = parseFloat(parts[2].replace("rad", "")) * (180 / Math.PI);
+        if (parts[2].includes("turn"))
+          H = parseFloat(parts[2].replace("turn", "")) * 360;
       }
       if (isNaN(H)) H = 0;
-      
+
       let alpha = 1;
       if (parts[3]) {
         alpha = parseFloat(parts[3]);
-        if (parts[3].includes('%')) alpha = alpha / 100;
+        if (parts[3].includes("%")) alpha = alpha / 100;
       }
       if (isNaN(alpha)) alpha = 1;
-      
-      const hRad = H * Math.PI / 180;
+
+      const hRad = (H * Math.PI) / 180;
       const a = C * Math.cos(hRad);
       const b = C * Math.sin(hRad);
-      
+
       return oklabToRgb(L, a, b, alpha);
     } catch (e) {
-      return 'rgb(0,0,0)';
+      return "rgb(0,0,0)";
     }
   });
 
   result = result.replace(/oklab\(([^)]+)\)/gi, (match, content) => {
     try {
       const parts = content.trim().split(/[\s,+/]+/);
-      if (parts.length < 3) return 'rgb(0,0,0)';
-      
+      if (parts.length < 3) return "rgb(0,0,0)";
+
       let L = parseFloat(parts[0]);
       if (isNaN(L)) L = 0;
-      if (parts[0] && parts[0].includes('%')) L = L / 100;
-      
+      if (parts[0] && parts[0].includes("%")) L = L / 100;
+
       let a = parseFloat(parts[1]);
       if (isNaN(a)) a = 0;
-      if (parts[1] && parts[1].includes('%')) a = a / 100;
-      
+      if (parts[1] && parts[1].includes("%")) a = a / 100;
+
       let b = parseFloat(parts[2]);
       if (isNaN(b)) b = 0;
-      if (parts[2] && parts[2].includes('%')) b = b / 100;
-      
+      if (parts[2] && parts[2].includes("%")) b = b / 100;
+
       let alpha = 1;
       if (parts[3]) {
         alpha = parseFloat(parts[3]);
-        if (parts[3].includes('%')) alpha = alpha / 100;
+        if (parts[3].includes("%")) alpha = alpha / 100;
       }
       if (isNaN(alpha)) alpha = 1;
-      
+
       return oklabToRgb(L, a, b, alpha);
     } catch (e) {
-      return 'rgb(0,0,0)';
+      return "rgb(0,0,0)";
     }
   });
 
@@ -150,13 +173,15 @@ export default function StudentReportView() {
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<StudentReportData | null>(null);
   const [student, setStudent] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'print' | 'phone'>('print');
-  const [expandedSubjects, setExpandedSubjects] = useState<Record<number, boolean>>({});
+  const [viewMode, setViewMode] = useState<"print" | "phone">("print");
+  const [expandedSubjects, setExpandedSubjects] = useState<
+    Record<number, boolean>
+  >({});
 
   useEffect(() => {
-    const savedStudent = localStorage.getItem('student_session');
+    const savedStudent = localStorage.getItem("student_session");
     if (!savedStudent) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
     const studentInfo = JSON.parse(savedStudent);
@@ -165,7 +190,7 @@ export default function StudentReportView() {
 
     // Auto-detect mobile screen and default to phone view
     if (window.innerWidth < 1024) {
-      setViewMode('phone');
+      setViewMode("phone");
     }
   }, [navigate]);
 
@@ -174,64 +199,130 @@ export default function StudentReportView() {
       setLoading(true);
       const session = "2023/2024";
       const term = "1st Term";
-      
-      const scoresRef = collection(db, 'scores');
+
+      const scoresRef = collection(db, "scores");
       const q = query(
-        scoresRef, 
-        where('studentId', '==', studentInfo.regNo),
-        where('session', '==', session),
-        where('term', '==', term)
+        scoresRef,
+        where("studentId", "==", studentInfo.regNo),
+        where("session", "==", session),
+        where("term", "==", term),
       );
-      
+
       const querySnapshot = await getDocs(q);
       const subjects: Subject[] = [];
-      
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         subjects.push({
           name: data.subject,
+          ca1: parseInt(data.ca1) || 0,
+          ca2: parseInt(data.ca2) || 0,
+          ca3: parseInt(data.ca3) || 0,
+          ca4: parseInt(data.ca4) || 0,
           ca: data.ca,
           exam: data.exam,
           total: data.total,
           grade: data.grade,
-          remark: data.total >= 70 ? 'Excellent' : data.total >= 60 ? 'Very Good' : data.total >= 50 ? 'Credit' : 'Pass'
+          remark:
+            data.total >= 70
+              ? "Excellent"
+              : data.total >= 60
+                ? "Very Good"
+                : data.total >= 50
+                  ? "Credit"
+                  : "Pass",
         });
+      });
+
+      // Sort subjects by total descending
+      subjects.sort((a, b) => b.total - a.total);
+
+      // Assign position (rank) within subjects
+      subjects.forEach((sub, index) => {
+        const rank = index + 1;
+        const suffix =
+          ["st", "nd", "rd"][((((rank + 90) % 100) - 10) % 10) - 1] || "th";
+        sub.position = `${rank}${suffix}`;
       });
 
       if (subjects.length === 0) {
         // Fallback to mock if no scores found for demo
+        const mockSubjects: Subject[] = [
+          {
+            name: "Mathematics",
+            ca1: 8,
+            ca2: 7,
+            ca3: 5,
+            ca4: 5,
+            ca: 25,
+            exam: 52,
+            total: 77,
+            grade: "A",
+            remark: "Excellent",
+          },
+          {
+            name: "English Language",
+            ca1: 6,
+            ca2: 8,
+            ca3: 4,
+            ca4: 4,
+            ca: 22,
+            exam: 48,
+            total: 70,
+            grade: "A",
+            remark: "Excellent",
+          },
+          {
+            name: "Basic Science",
+            ca1: 5,
+            ca2: 5,
+            ca3: 4,
+            ca4: 4,
+            ca: 18,
+            exam: 45,
+            total: 63,
+            grade: "B",
+            remark: "Very Good",
+          },
+        ];
+        mockSubjects.sort((a, b) => b.total - a.total);
+        mockSubjects.forEach((sub, index) => {
+          const rank = index + 1;
+          const suffix =
+            ["st", "nd", "rd"][((((rank + 90) % 100) - 10) % 10) - 1] || "th";
+          sub.position = `${rank}${suffix}`;
+        });
+
         setReportData({
           name: studentInfo.name,
           admissionNo: studentInfo.regNo,
           class: studentInfo.class.toUpperCase(),
-          arm: 'A',
+          arm: "A",
           term: term,
           session: session,
-          gender: studentInfo.gender || 'Not Specified',
-          attendance: '95/100',
-          position: '4th',
-          subjects: [
-            { name: 'Mathematics', ca: 25, exam: 52, total: 77, grade: 'A', remark: 'Excellent' },
-            { name: 'English Language', ca: 22, exam: 48, total: 70, grade: 'A', remark: 'Excellent' },
-            { name: 'Basic Science', ca: 18, exam: 45, total: 63, grade: 'B', remark: 'Very Good' },
-          ],
-          teacherComment: 'An exceptional student with great potential.',
-          principalComment: 'Keep up the good work.'
+          gender: studentInfo.gender || "Not Specified",
+          daysPresent: 95,
+          daysAbsent: 5,
+          position: "4th",
+          subjects: mockSubjects,
+          teacherComment: "An exceptional student with great potential.",
+          principalComment: "Keep up the good work.",
         });
       } else {
         setReportData({
           name: studentInfo.name,
           admissionNo: studentInfo.regNo,
           class: studentInfo.class.toUpperCase(),
-          arm: 'A',
+          arm: "A",
           term: term,
           session: session,
-          gender: studentInfo.gender || 'Not Specified',
-          attendance: '95/100',
-          position: 'Calculating...',
+          gender: studentInfo.gender || "Not Specified",
+          daysPresent: 95,
+          daysAbsent: 5,
+          position: "Calculating...",
           subjects: subjects,
-          teacherComment: 'Performance based on recorded scores.',
-          principalComment: 'Approved for release.'
+          teacherComment: "Performance based on recorded scores.",
+          principalComment: "Approved for release.",
         });
       }
     } catch (error) {
@@ -245,61 +336,75 @@ export default function StudentReportView() {
   const handleDownload = () => {
     if (!reportRef.current) return;
     const element = reportRef.current;
-    
+
     // Temporarily announce downloading
-    const toastId = toast.loading("Generating your official PDF report sheet...");
-    
+    const toastId = toast.loading(
+      "Generating your official PDF report sheet...",
+    );
+
     const opt = {
       margin: [0, 0, 0, 0] as [number, number, number, number],
-      filename: `Report_Sheet_${student?.regNo || 'Student'}.pdf`,
-      image: { type: 'jpeg' as const, quality: 1.0 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
+      filename: `Report_Sheet_${student?.regNo || "Student"}.pdf`,
+      image: { type: "jpeg" as const, quality: 1.0 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
         letterRendering: true,
         scrollY: 0,
         onclone: (documentClone: Document) => {
-          const hiddenContainers = documentClone.querySelectorAll('.pdf-export-container');
+          const hiddenContainers = documentClone.querySelectorAll(
+            ".pdf-export-container",
+          );
           hiddenContainers.forEach((container: any) => {
-            container.style.position = 'static';
-            container.style.opacity = '1';
-            container.style.display = 'block';
+            container.style.position = "static";
+            container.style.opacity = "1";
+            container.style.display = "block";
           });
-          const previewContainer = documentClone.querySelector('.student-report-preview-container');
+          const previewContainer = documentClone.querySelector(
+            ".student-report-preview-container",
+          );
           if (previewContainer) {
-            (previewContainer as HTMLElement).style.padding = '0';
-            (previewContainer as HTMLElement).style.margin = '0';
-            (previewContainer as HTMLElement).style.boxShadow = 'none';
+            (previewContainer as HTMLElement).style.padding = "0";
+            (previewContainer as HTMLElement).style.margin = "0";
+            (previewContainer as HTMLElement).style.boxShadow = "none";
           }
-          const pages = documentClone.querySelectorAll('.report-sheet-page');
+          const pages = documentClone.querySelectorAll(".report-sheet-page");
           pages.forEach((page: any) => {
-            page.style.boxShadow = 'none';
-            page.style.height = '296mm';
-            page.style.minHeight = '296mm';
-            page.style.maxHeight = '296mm';
-            page.style.margin = '0';
+            page.style.boxShadow = "none";
+            page.style.height = "296mm";
+            page.style.minHeight = "296mm";
+            page.style.maxHeight = "296mm";
+            page.style.margin = "0";
           });
 
           // Convert modern oklch/oklab styles inside <style> tags of documentClone
-          documentClone.querySelectorAll('style').forEach((styleEl: any) => {
+          documentClone.querySelectorAll("style").forEach((styleEl: any) => {
             if (styleEl.textContent) {
               styleEl.textContent = convertModernColors(styleEl.textContent);
             }
           });
 
           // Convert inline styles of all elements in the cloned DOM
-          documentClone.querySelectorAll('*').forEach((el: any) => {
-            if (el.hasAttribute('style')) {
-              const styleAttr = el.getAttribute('style');
-              if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab'))) {
-                el.setAttribute('style', convertModernColors(styleAttr));
+          documentClone.querySelectorAll("*").forEach((el: any) => {
+            if (el.hasAttribute("style")) {
+              const styleAttr = el.getAttribute("style");
+              if (
+                styleAttr &&
+                (styleAttr.includes("oklch") || styleAttr.includes("oklab"))
+              ) {
+                el.setAttribute("style", convertModernColors(styleAttr));
               }
             }
           });
-        }
+        },
       },
-      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const, compress: true },
-      pagebreak: { mode: 'css' as const, avoid: ['.report-sheet-page'] }
+      jsPDF: {
+        unit: "mm" as const,
+        format: "a4" as const,
+        orientation: "portrait" as const,
+        compress: true,
+      },
+      pagebreak: { mode: "css" as const, avoid: [".report-sheet-page"] },
     };
 
     // Intercept window.getComputedStyle to translate any oklch color to standard sRGB
@@ -308,22 +413,25 @@ export default function StudentReportView() {
       const style = originalGetComputedStyle(elt, pseudoElt);
       return new Proxy(style, {
         get(target, prop, receiver) {
-          if (prop === 'getPropertyValue') {
+          if (prop === "getPropertyValue") {
             return function (propertyName: string) {
               const val = target.getPropertyValue(propertyName);
-              return typeof val === 'string' ? convertModernColors(val) : val;
+              return typeof val === "string" ? convertModernColors(val) : val;
             };
           }
           const val = Reflect.get(target, prop, receiver);
-          if (typeof val === 'string') {
+          if (typeof val === "string") {
             return convertModernColors(val);
           }
           return val;
-        }
+        },
       }) as any;
     };
 
-    html2pdf().from(element).set(opt).save()
+    html2pdf()
+      .from(element)
+      .set(opt)
+      .save()
       .then(() => {
         toast.dismiss(toastId);
         toast.success("PDF report downloaded successfully!");
@@ -340,14 +448,19 @@ export default function StudentReportView() {
 
   const handlePrint = () => {
     try {
-      toast.info("If the print dialog doesn't appear, please click the 'Open App in New Tab' icon at the top right of this preview panel.", { duration: 5000 });
+      toast.info(
+        "If the print dialog doesn't appear, please click the 'Open App in New Tab' icon at the top right of this preview panel.",
+        { duration: 5000 },
+      );
       setTimeout(() => {
         window.focus();
         window.print();
       }, 500);
     } catch (e) {
       console.error("Print error:", e);
-      toast.error("Could not open print dialog. Please try using the PDF download button instead.");
+      toast.error(
+        "Could not open print dialog. Please try using the PDF download button instead.",
+      );
     }
   };
 
@@ -356,7 +469,9 @@ export default function StudentReportView() {
       <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Preparing your report...</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Preparing your report...
+          </p>
         </div>
       </div>
     );
@@ -364,7 +479,10 @@ export default function StudentReportView() {
 
   if (!reportData) return null;
 
-  const totalScore = reportData.subjects.reduce((sum, sub) => sum + sub.total, 0);
+  const totalScore = reportData.subjects.reduce(
+    (sum, sub) => sum + sub.total,
+    0,
+  );
   const avgScore = (totalScore / (reportData.subjects.length || 1)).toFixed(1);
 
   return (
@@ -372,7 +490,10 @@ export default function StudentReportView() {
       {/* Controls & Nav Header */}
       <div className="max-w-5xl mx-auto mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <Link to="/student/dashboard">
-          <Button variant="ghost" className="text-slate-500 hover:text-primary pl-0">
+          <Button
+            variant="ghost"
+            className="text-slate-500 hover:text-primary pl-0"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
@@ -382,27 +503,27 @@ export default function StudentReportView() {
         <div className="flex flex-wrap items-center gap-4">
           {/* Switcher */}
           <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-none border border-slate-200">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
-              onClick={() => setViewMode('print')}
+              onClick={() => setViewMode("print")}
               className={`rounded-none text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 h-8 px-3 ${
-                viewMode === 'print' 
-                  ? 'bg-white text-primary shadow-sm' 
-                  : 'text-slate-500 hover:text-primary'
+                viewMode === "print"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-slate-500 hover:text-primary"
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
               📄 A4 Print View
             </Button>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
-              onClick={() => setViewMode('phone')}
+              onClick={() => setViewMode("phone")}
               className={`rounded-none text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 h-8 px-3 ${
-                viewMode === 'phone' 
-                  ? 'bg-white text-primary shadow-sm' 
-                  : 'text-slate-500 hover:text-primary'
+                viewMode === "phone"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-slate-500 hover:text-primary"
               }`}
             >
               <Smartphone className="w-3.5 h-3.5" />
@@ -414,13 +535,13 @@ export default function StudentReportView() {
           <div className="sm:hidden relative inline-block text-left w-full max-w-[200px]">
             <select
               value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as 'print' | 'phone')}
+              onChange={(e) => setViewMode(e.target.value as "print" | "phone")}
               className="w-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest h-9 px-3 rounded-none appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary pr-8"
               style={{
                 backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 10px center',
-                backgroundSize: '12px'
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 10px center",
+                backgroundSize: "12px",
               }}
             >
               <option value="print">📄 A4 Print View</option>
@@ -429,11 +550,18 @@ export default function StudentReportView() {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handlePrint} className="border-primary/20 text-primary rounded-none h-9 text-xs uppercase tracking-widest font-bold">
+            <Button
+              variant="outline"
+              onClick={handlePrint}
+              className="border-primary/20 text-primary rounded-none h-9 text-xs uppercase tracking-widest font-bold"
+            >
               <Printer className="w-3.5 h-3.5 mr-1.5" />
               Print
             </Button>
-            <Button onClick={handleDownload} className="bg-primary text-white rounded-none h-9 text-xs uppercase tracking-widest font-bold">
+            <Button
+              onClick={handleDownload}
+              className="bg-primary text-white rounded-none h-9 text-xs uppercase tracking-widest font-bold"
+            >
               <Download className="w-3.5 h-3.5 mr-1.5" />
               Download PDF
             </Button>
@@ -444,153 +572,341 @@ export default function StudentReportView() {
       {/* Screen Views */}
       <div className="print:hidden">
         <AnimatePresence mode="wait">
-          {viewMode === 'print' ? (
+          {viewMode === "print" ? (
             /* Standard A4 Print View (On-screen) */
             <div className="w-full overflow-x-auto pb-6 custom-scrollbar flex justify-start lg:justify-center">
-              <motion.div 
+              <motion.div
                 key="print-view"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="mx-auto bg-white shadow-2xl flex flex-col p-12 border-[12px] border-double relative overflow-hidden print:shadow-none print:border-none print:p-0 shrink-0" 
-                style={{ borderColor: '#2563eb', width: '210mm', height: '296mm', boxSizing: 'border-box', pageBreakInside: 'avoid' }}
+                className="mx-auto bg-white shadow-2xl flex flex-col p-12 border-[12px] border-double relative overflow-hidden print:shadow-none print:border-none print:p-0 shrink-0"
+                style={{
+                  borderColor: "#2563eb",
+                  width: "210mm",
+                  height: "296mm",
+                  boxSizing: "border-box",
+                  pageBreakInside: "avoid",
+                }}
               >
-              {/* Watermark */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
-                <img src={LOGO_BASE64} alt="" className="w-[600px] h-[600px] object-contain grayscale"  />
-              </div>
-
-              {/* Header */}
-              <div className="flex justify-between items-start border-b-4 pb-8 mb-10" style={{ borderColor: '#2563eb' }}>
-                <div className="w-32">
-                  <img src={LOGO_BASE64} alt="NDA Logo" className="w-28 h-28 object-contain"  />
+                {/* Watermark */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
+                  <img
+                    src={LOGO_BASE64}
+                    alt=""
+                    className="w-[600px] h-[600px] object-contain grayscale"
+                  />
                 </div>
-                <div className="flex-1 text-center px-8">
-                  <h1 className="text-4xl font-serif font-black tracking-tighter text-red-600 mb-1">NDA Staff Secondary School</h1>
-                  <p className="text-[11px] font-bold tracking-[0.2em] text-red-500/80 uppercase mb-0.5">Knowledge · Discipline · Excellence</p>
-                  <p className="text-[11px] font-medium text-red-400 mb-4 italic">Nigerian Defence Academy, Kaduna State, Nigeria</p>
-                  <div className="flex justify-center gap-8 text-[11px] font-bold uppercase tracking-widest text-slate-500">
-                    <span>{reportData.session} Session</span>
-                    <span className="w-1.5 h-1.5 bg-accent rounded-full self-center"></span>
-                    <span>{reportData.term}</span>
+
+                {/* Header */}
+                <div
+                  className="flex justify-between items-start border-b-4 pb-8 mb-10"
+                  style={{ borderColor: "#2563eb" }}
+                >
+                  <div className="w-32">
+                    <img
+                      src={LOGO_BASE64}
+                      alt="NDA Logo"
+                      className="w-28 h-28 object-contain"
+                    />
+                  </div>
+                  <div className="flex-1 text-center px-8">
+                    <h1 className="text-4xl font-serif font-black tracking-tighter text-red-600 mb-1">
+                      NDA Staff Secondary School
+                    </h1>
+                    <p className="text-[11px] font-bold tracking-[0.2em] text-red-500/80 uppercase mb-0.5">
+                      Knowledge · Discipline · Excellence
+                    </p>
+                    <p className="text-[11px] font-medium text-red-400 mb-4 italic">
+                      Nigerian Defence Academy, Kaduna State, Nigeria
+                    </p>
+                    <div className="flex justify-center gap-8 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                      <span>{reportData.session} Session</span>
+                      <span className="w-1.5 h-1.5 bg-accent rounded-full self-center"></span>
+                      <span>{reportData.term}</span>
+                    </div>
+                  </div>
+                  <div className="w-32 flex justify-end">
+                    <div
+                      className="w-20 h-24 border-2 p-0.5 shadow-md relative overflow-hidden flex items-center justify-center bg-white animate-fade-in"
+                      style={{ borderColor: "#2563eb" }}
+                    >
+                      {student?.passportPhoto ? (
+                        <img
+                          src={student.passportPhoto}
+                          alt="Student Passport"
+                          className="w-full h-full object-cover"
+                          style={{ imageRendering: "pixelated" }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-[8px] font-bold text-center uppercase tracking-tighter bg-slate-50 text-slate-400 gap-1">
+                          <Award className="w-8 h-8 text-accent" />
+                          <span>Official</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="w-32 flex justify-end">
-                  <div className="w-20 h-24 border-2 p-0.5 shadow-md relative overflow-hidden flex items-center justify-center bg-white animate-fade-in" style={{ borderColor: '#2563eb' }}>
-                    {student?.passportPhoto ? (
-                      <img 
-                        src={student.passportPhoto} 
-                        alt="Student Passport" 
-                        className="w-full h-full object-cover" 
-                        style={{ imageRendering: 'pixelated' }} 
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-[8px] font-bold text-center uppercase tracking-tighter bg-slate-50 text-slate-400 gap-1">
-                        <Award className="w-8 h-8 text-accent" />
-                        <span>Official</span>
-                      </div>
-                    )}
+
+                {/* Student Info Grid */}
+                <div className="grid grid-cols-3 gap-y-6 gap-x-12 mb-12 bg-slate-50/50 p-8 border border-slate-100">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                      Student Name
+                    </p>
+                    <p className="text-sm font-bold text-primary">
+                      {reportData.name}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                      Admission No
+                    </p>
+                    <p className="text-sm font-bold text-primary">
+                      {reportData.admissionNo}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                      Gender
+                    </p>
+                    <p className="text-sm font-bold text-primary">
+                      {reportData.gender}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                      Class
+                    </p>
+                    <p className="text-sm font-bold text-primary">
+                      {reportData.class} {reportData.arm}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                      Attendance
+                    </p>
+                    <p className="text-sm font-bold text-primary">
+                      {reportData.daysPresent} /{" "}
+                      {reportData.daysPresent + reportData.daysAbsent} days
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                      Position
+                    </p>
+                    <p className="text-sm font-bold text-accent">
+                      {reportData.position}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Student Info Grid */}
-              <div className="grid grid-cols-3 gap-y-6 gap-x-12 mb-12 bg-slate-50/50 p-8 border border-slate-100">
-                <div className="space-y-1">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Student Name</p>
-                  <p className="text-sm font-bold text-primary">{reportData.name}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Admission No</p>
-                  <p className="text-sm font-bold text-primary">{reportData.admissionNo}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Gender</p>
-                  <p className="text-sm font-bold text-primary">{reportData.gender}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Class</p>
-                  <p className="text-sm font-bold text-primary">{reportData.class} {reportData.arm}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Attendance</p>
-                  <p className="text-sm font-bold text-primary">{reportData.attendance}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Position</p>
-                  <p className="text-sm font-bold text-accent">{reportData.position}</p>
-                </div>
-              </div>
-
-              {/* Scores Table */}
-              <div className="mb-12">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-primary text-white">
-                      <th className="p-4 text-left text-[10px] font-bold uppercase tracking-widest border border-primary">Subject</th>
-                      <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">CA (40)</th>
-                      <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">Exam (60)</th>
-                      <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">Total (100)</th>
-                      <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">Grade</th>
-                      <th className="p-4 text-left text-[10px] font-bold uppercase tracking-widest border border-primary">Remarks</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.subjects.map((sub, idx) => (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}>
-                        <td className="p-4 text-sm font-bold text-primary border border-slate-200">{sub.name}</td>
-                        <td className="p-4 text-center text-sm font-medium border border-slate-200">{sub.ca}</td>
-                        <td className="p-4 text-center text-sm font-medium border border-slate-200">{sub.exam}</td>
-                        <td className="p-4 text-center text-sm font-bold border border-slate-200" style={{ color: sub.total >= 50 ? '#2563eb' : '#ef4444' }}>{sub.total}</td>
-                        <td className="p-4 text-center border border-slate-200">
-                          <span className="px-3 py-1 bg-primary/5 text-primary text-[10px] font-black border border-primary/10">
-                            {sub.grade}
-                          </span>
-                        </td>
-                        <td className="p-4 text-sm font-medium italic text-slate-500 border border-slate-200">{sub.remark}</td>
+                {/* Scores Table */}
+                <div className="mb-8">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-primary text-white">
+                        <th className="p-3 text-left text-[9px] font-bold uppercase tracking-widest border border-primary">
+                          Subject
+                        </th>
+                        <th className="p-3 text-center text-[8px] font-bold uppercase tracking-widest border border-primary">
+                          CA1
+                          <br />
+                          (10)
+                        </th>
+                        <th className="p-3 text-center text-[8px] font-bold uppercase tracking-widest border border-primary">
+                          CA2
+                          <br />
+                          (10)
+                        </th>
+                        <th className="p-3 text-center text-[8px] font-bold uppercase tracking-widest border border-primary">
+                          CA3
+                          <br />
+                          (10)
+                        </th>
+                        <th className="p-3 text-center text-[8px] font-bold uppercase tracking-widest border border-primary">
+                          CA4
+                          <br />
+                          (10)
+                        </th>
+                        <th className="p-3 text-center text-[9px] font-bold uppercase tracking-widest border border-primary">
+                          Exam
+                          <br />
+                          (60)
+                        </th>
+                        <th className="p-3 text-center text-[9px] font-bold uppercase tracking-widest border border-primary">
+                          Total
+                          <br />
+                          (100)
+                        </th>
+                        <th className="p-3 text-center text-[9px] font-bold uppercase tracking-widest border border-primary">
+                          Grade
+                        </th>
+                        <th className="p-3 text-center text-[9px] font-bold uppercase tracking-widest border border-primary">
+                          Pos
+                        </th>
+                        <th className="p-3 text-left text-[9px] font-bold uppercase tracking-widest border border-primary">
+                          Remarks
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {reportData.subjects.map((sub, idx) => (
+                        <tr
+                          key={idx}
+                          className={
+                            idx % 2 === 0 ? "bg-white" : "bg-slate-50/30"
+                          }
+                        >
+                          <td className="p-3 text-[11px] font-bold text-primary border border-slate-200">
+                            {sub.name}
+                          </td>
+                          <td className="p-3 text-center text-[10px] font-medium border border-slate-200 text-slate-600">
+                            {sub.ca1 || "-"}
+                          </td>
+                          <td className="p-3 text-center text-[10px] font-medium border border-slate-200 text-slate-600">
+                            {sub.ca2 || "-"}
+                          </td>
+                          <td className="p-3 text-center text-[10px] font-medium border border-slate-200 text-slate-600">
+                            {sub.ca3 || "-"}
+                          </td>
+                          <td className="p-3 text-center text-[10px] font-medium border border-slate-200 text-slate-600">
+                            {sub.ca4 || "-"}
+                          </td>
+                          <td className="p-3 text-center text-[11px] font-medium border border-slate-200">
+                            {sub.exam}
+                          </td>
+                          <td
+                            className="p-3 text-center text-[11px] font-bold border border-slate-200 bg-slate-50"
+                            style={{
+                              color: sub.total >= 50 ? "#2563eb" : "#ef4444",
+                            }}
+                          >
+                            {sub.total}
+                          </td>
+                          <td className="p-3 text-center border border-slate-200">
+                            <span className="px-2 py-0.5 bg-primary/5 text-primary text-[10px] font-black border border-primary/10">
+                              {sub.grade}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center text-[10px] font-bold text-accent border border-slate-200">
+                            {sub.position}
+                          </td>
+                          <td className="p-3 text-[10px] font-medium italic text-slate-500 border border-slate-200">
+                            {sub.remark}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              {/* Comments Section */}
-              <div className="grid grid-cols-2 gap-12 mb-16">
-                <div className="space-y-4">
-                  <div className="p-6 bg-slate-50 border-l-4 border-primary">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Form Teacher's Comment</p>
-                    <p className="text-sm italic font-serif text-primary">"{reportData.teacherComment}"</p>
+                {/* Assessment Section */}
+                <div className="grid grid-cols-2 gap-8 mb-10">
+                  <div>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">
+                      Affective Domain
+                    </h4>
+                    <table className="w-full border-collapse text-[9px]">
+                      <tbody>
+                        {[
+                          "Punctuality",
+                          "Attendance",
+                          "Reliability",
+                          "Neatness",
+                          "Politeness",
+                          "Honesty",
+                          "Self Control",
+                        ].map((trait, i) => (
+                          <tr key={i} className="border-b border-slate-200">
+                            <td className="py-1.5 text-slate-600">{trait}</td>
+                            <td className="py-1.5 text-right font-bold text-primary">
+                              5
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="pt-8 border-t border-dashed border-slate-300">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Teacher's Signature</p>
+                  <div>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">
+                      Psychomotor Domain
+                    </h4>
+                    <table className="w-full border-collapse text-[9px]">
+                      <tbody>
+                        {[
+                          "Handwriting",
+                          "Fluency",
+                          "Games / Sports",
+                          "Handling of Tools",
+                          "Drawing / Painting",
+                          "Musical Skills",
+                          "Gymnastics",
+                        ].map((trait, i) => (
+                          <tr key={i} className="border-b border-slate-200">
+                            <td className="py-1.5 text-slate-600">{trait}</td>
+                            <td className="py-1.5 text-right font-bold text-primary">
+                              A
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <div className="p-6 bg-slate-50 border-l-4 border-accent">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Principal's Comment</p>
-                    <p className="text-sm italic font-serif text-primary">"{reportData.principalComment}"</p>
-                  </div>
-                  <div className="pt-8 border-t border-dashed border-slate-300">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Principal's Signature & Stamp</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Footer Info */}
-              <div className="flex justify-between items-end pt-8 border-t-2 border-slate-100 mt-auto">
-                <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                  Generated on {new Date().toLocaleDateString()} | NDA Staff School Portal
+                {/* Comments Section */}
+                <div className="grid grid-cols-2 gap-12 mb-16">
+                  <div className="space-y-4">
+                    <div className="p-6 bg-slate-50 border-l-4 border-primary">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                        Form Teacher's Comment
+                      </p>
+                      <p className="text-sm italic font-serif text-primary">
+                        "{reportData.teacherComment}"
+                      </p>
+                    </div>
+                    <div className="pt-8 border-t border-dashed border-slate-300">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                        Teacher's Signature
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="p-6 bg-slate-50 border-l-4 border-accent">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                        Principal's Comment
+                      </p>
+                      <p className="text-sm italic font-serif text-primary">
+                        "{reportData.principalComment}"
+                      </p>
+                    </div>
+                    <div className="pt-8 border-t border-dashed border-slate-300">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                        Principal's Signature & Stamp
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600">Official Digital Document</span>
+
+                {/* Footer Info */}
+                <div className="flex justify-between items-end pt-8 border-t-2 border-slate-100 mt-auto">
+                  <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                    Generated on {new Date().toLocaleDateString()} | NDA Staff
+                    School Portal
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600">
+                      Official Digital Document
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          </div>
+              </motion.div>
+            </div>
           ) : (
             /* Custom Responsive Phone View (Rendered inside smartphone preview on desktop, and full screen on mobile) */
-            <motion.div 
+            <motion.div
               key="phone-view"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -601,7 +917,7 @@ export default function StudentReportView() {
               <div className="lg:border-[14px] lg:border-slate-800 lg:rounded-[40px] lg:shadow-2xl lg:bg-slate-900 lg:overflow-hidden lg:relative lg:aspect-[9/19.5]">
                 {/* Simulated iPhone Speaker and Camera bar */}
                 <div className="hidden lg:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-2xl z-50"></div>
-                
+
                 {/* Phone screen canvas */}
                 <div className="bg-slate-50 min-h-[700px] lg:max-h-[820px] lg:overflow-y-auto custom-scrollbar flex flex-col pb-8">
                   {/* Custom Mobile Header banner */}
@@ -609,11 +925,19 @@ export default function StudentReportView() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-10 h-10 bg-white rounded-full p-1 flex items-center justify-center">
-                          <img src={LOGO_BASE64} alt="NDA Logo" className="w-8 h-8 object-contain" />
+                          <img
+                            src={LOGO_BASE64}
+                            alt="NDA Logo"
+                            className="w-8 h-8 object-contain"
+                          />
                         </div>
                         <div>
-                          <h2 className="font-serif font-bold text-xs uppercase tracking-tight leading-none text-red-500">NDA STAFF SCHOOL</h2>
-                          <p className="text-[8px] font-black tracking-widest text-accent uppercase leading-none mt-1">Terminal Report Card</p>
+                          <h2 className="font-serif font-bold text-xs uppercase tracking-tight leading-none text-red-500">
+                            NDA STAFF SCHOOL
+                          </h2>
+                          <p className="text-[8px] font-black tracking-widest text-accent uppercase leading-none mt-1">
+                            Terminal Report Card
+                          </p>
                         </div>
                       </div>
                       <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest">
@@ -622,11 +946,15 @@ export default function StudentReportView() {
                     </div>
 
                     <div className="space-y-1.5 mt-6">
-                      <h3 className="text-lg font-serif font-bold tracking-tight text-white leading-tight">{reportData.name}</h3>
+                      <h3 className="text-lg font-serif font-bold tracking-tight text-white leading-tight">
+                        {reportData.name}
+                      </h3>
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-300 uppercase tracking-wider">
                         <span>{reportData.admissionNo}</span>
                         <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-                        <span>{reportData.class} {reportData.arm}</span>
+                        <span>
+                          {reportData.class} {reportData.arm}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -635,20 +963,37 @@ export default function StudentReportView() {
                   <div className="px-4 -mt-5">
                     <div className="bg-white p-4 shadow-md border border-slate-100 rounded-xl grid grid-cols-4 gap-2 text-center">
                       <div className="flex flex-col justify-between p-1.5 bg-blue-50/50 border border-blue-100 rounded-lg">
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Average</span>
-                        <span className="text-sm font-serif font-black text-primary mt-1">{avgScore}%</span>
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">
+                          Average
+                        </span>
+                        <span className="text-sm font-serif font-black text-primary mt-1">
+                          {avgScore}%
+                        </span>
                       </div>
                       <div className="flex flex-col justify-between p-1.5 bg-amber-50/50 border border-amber-100 rounded-lg">
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Position</span>
-                        <span className="text-sm font-serif font-black text-amber-700 mt-1">{reportData.position}</span>
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">
+                          Position
+                        </span>
+                        <span className="text-sm font-serif font-black text-amber-700 mt-1">
+                          {reportData.position}
+                        </span>
                       </div>
                       <div className="flex flex-col justify-between p-1.5 bg-emerald-50/50 border border-emerald-100 rounded-lg">
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Presence</span>
-                        <span className="text-xs font-serif font-black text-emerald-700 mt-1.5 leading-none">{reportData.attendance}</span>
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">
+                          Presence
+                        </span>
+                        <span className="text-[10px] font-serif font-black text-emerald-700 mt-1.5 leading-none">
+                          {reportData.daysPresent}/
+                          {reportData.daysPresent + reportData.daysAbsent}
+                        </span>
                       </div>
                       <div className="flex flex-col justify-between p-1.5 bg-slate-50 border border-slate-100 rounded-lg">
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Total</span>
-                        <span className="text-sm font-serif font-black text-slate-700 mt-1">{totalScore}</span>
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">
+                          Total
+                        </span>
+                        <span className="text-sm font-serif font-black text-slate-700 mt-1">
+                          {totalScore}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -656,26 +1001,37 @@ export default function StudentReportView() {
                   {/* Subject List Cards */}
                   <div className="px-4 mt-6 space-y-4">
                     <div className="flex items-center justify-between px-1">
-                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Subject Breakdown</h4>
+                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                        Subject Breakdown
+                      </h4>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
-                            const allExpanded = Object.keys(expandedSubjects).length === reportData.subjects.length;
+                            const allExpanded =
+                              Object.keys(expandedSubjects).length ===
+                              reportData.subjects.length;
                             if (allExpanded) {
                               setExpandedSubjects({});
                             } else {
                               const next: Record<number, boolean> = {};
-                              reportData.subjects.forEach((_, i) => { next[i] = true; });
+                              reportData.subjects.forEach((_, i) => {
+                                next[i] = true;
+                              });
                               setExpandedSubjects(next);
                             }
                           }}
                           className="h-6 text-[8px] font-black uppercase tracking-widest text-primary p-1 bg-slate-100 hover:bg-slate-200"
                         >
-                          {Object.keys(expandedSubjects).length === reportData.subjects.length ? "Collapse All" : "Expand All"}
+                          {Object.keys(expandedSubjects).length ===
+                          reportData.subjects.length
+                            ? "Collapse All"
+                            : "Expand All"}
                         </Button>
-                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">{reportData.subjects.length} Subjects</span>
+                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">
+                          {reportData.subjects.length} Subjects
+                        </span>
                       </div>
                     </div>
 
@@ -683,21 +1039,41 @@ export default function StudentReportView() {
                       {reportData.subjects.map((sub, idx) => {
                         const isExpanded = !!expandedSubjects[idx];
                         return (
-                          <div key={idx} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div 
-                              onClick={() => setExpandedSubjects(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                          <div
+                            key={idx}
+                            className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                          >
+                            <div
+                              onClick={() =>
+                                setExpandedSubjects((prev) => ({
+                                  ...prev,
+                                  [idx]: !prev[idx],
+                                }))
+                              }
                               className="flex items-center justify-between cursor-pointer select-none"
                             >
                               <div className="flex items-center gap-2">
-                                {isExpanded ? <ChevronUp className="w-4 h-4 text-primary shrink-0" /> : <ChevronDown className="w-4 h-4 text-primary shrink-0" />}
-                                <span className="text-xs font-bold text-primary uppercase tracking-wider">{sub.name}</span>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4 text-primary shrink-0" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-primary shrink-0" />
+                                )}
+                                <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                                  {sub.name}
+                                </span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className={`inline-flex items-center justify-center w-6 h-6 font-serif font-bold text-[10px] rounded-full border ${
-                                  sub.grade === 'A' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                                  sub.grade === 'B' ? 'bg-blue-50 border-blue-200 text-blue-700' :
-                                  sub.grade === 'C' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'
-                                }`}>
+                                <span
+                                  className={`inline-flex items-center justify-center w-6 h-6 font-serif font-bold text-[10px] rounded-full border ${
+                                    sub.grade === "A"
+                                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                      : sub.grade === "B"
+                                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                                        : sub.grade === "C"
+                                          ? "bg-amber-50 border-amber-200 text-amber-700"
+                                          : "bg-red-50 border-red-200 text-red-700"
+                                  }`}
+                                >
                                   {sub.grade}
                                 </span>
                               </div>
@@ -712,24 +1088,72 @@ export default function StudentReportView() {
                                   transition={{ duration: 0.2 }}
                                   className="overflow-hidden mt-3 pt-3 border-t border-slate-50"
                                 >
-                                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] uppercase font-bold mb-3">
-                                    <div className="p-1.5 bg-slate-50 rounded-lg">
-                                      <span className="text-[8px] text-slate-400 block mb-0.5">CA (40)</span>
-                                      <span className="text-slate-700">{sub.ca}</span>
+                                  <div className="grid grid-cols-4 gap-1 text-center text-[10px] uppercase font-bold mb-2">
+                                    <div className="p-1 bg-slate-50 rounded-lg border border-slate-100">
+                                      <span className="text-[7px] text-slate-400 block">
+                                        CA1 (10)
+                                      </span>
+                                      <span className="text-slate-600">
+                                        {sub.ca1 || "-"}
+                                      </span>
                                     </div>
-                                    <div className="p-1.5 bg-slate-50 rounded-lg">
-                                      <span className="text-[8px] text-slate-400 block mb-0.5">Exam (60)</span>
-                                      <span className="text-slate-700">{sub.exam}</span>
+                                    <div className="p-1 bg-slate-50 rounded-lg border border-slate-100">
+                                      <span className="text-[7px] text-slate-400 block">
+                                        CA2 (10)
+                                      </span>
+                                      <span className="text-slate-600">
+                                        {sub.ca2 || "-"}
+                                      </span>
+                                    </div>
+                                    <div className="p-1 bg-slate-50 rounded-lg border border-slate-100">
+                                      <span className="text-[7px] text-slate-400 block">
+                                        CA3 (10)
+                                      </span>
+                                      <span className="text-slate-600">
+                                        {sub.ca3 || "-"}
+                                      </span>
+                                    </div>
+                                    <div className="p-1 bg-slate-50 rounded-lg border border-slate-100">
+                                      <span className="text-[7px] text-slate-400 block">
+                                        CA4 (10)
+                                      </span>
+                                      <span className="text-slate-600">
+                                        {sub.ca4 || "-"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] uppercase font-bold mb-3">
+                                    <div className="p-1.5 bg-slate-50 rounded-lg border border-slate-100">
+                                      <span className="text-[8px] text-slate-400 block mb-0.5">
+                                        Total CA (40)
+                                      </span>
+                                      <span className="text-slate-700">
+                                        {sub.ca}
+                                      </span>
+                                    </div>
+                                    <div className="p-1.5 bg-slate-50 rounded-lg border border-slate-100">
+                                      <span className="text-[8px] text-slate-400 block mb-0.5">
+                                        Exam (60)
+                                      </span>
+                                      <span className="text-slate-700">
+                                        {sub.exam}
+                                      </span>
                                     </div>
                                     <div className="p-1.5 bg-blue-50 border border-blue-100 rounded-lg">
-                                      <span className="text-[8px] text-blue-400 block mb-0.5">Total (100)</span>
-                                      <span className="text-primary font-extrabold">{sub.total}</span>
+                                      <span className="text-[8px] text-blue-400 block mb-0.5">
+                                        Total (100)
+                                      </span>
+                                      <span className="text-primary font-extrabold">
+                                        {sub.total}
+                                      </span>
                                     </div>
                                   </div>
 
                                   <div className="text-[10px] italic text-slate-400 flex items-center justify-between">
                                     <span>Remarks:</span>
-                                    <span className="font-bold text-slate-600 not-italic uppercase tracking-widest text-[8px]">{sub.remark}</span>
+                                    <span className="font-bold text-slate-600 not-italic uppercase tracking-widest text-[8px]">
+                                      {sub.remark}
+                                    </span>
                                   </div>
                                 </motion.div>
                               )}
@@ -742,15 +1166,21 @@ export default function StudentReportView() {
 
                   {/* Staff Assessments / Comments */}
                   <div className="px-4 mt-6 space-y-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 px-1">Remarks & Approvals</h4>
+                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 px-1">
+                      Remarks & Approvals
+                    </h4>
 
                     {/* Teacher Card */}
                     <div className="bg-white border-l-4 border-primary rounded-r-xl p-4 shadow-sm">
                       <div className="flex items-center gap-1.5 mb-2">
                         <BookCheck className="w-3.5 h-3.5 text-primary" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-primary">Class Teacher's Comment</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-primary">
+                          Class Teacher's Comment
+                        </span>
                       </div>
-                      <p className="text-xs italic text-slate-600 leading-relaxed font-serif">"{reportData.teacherComment}"</p>
+                      <p className="text-xs italic text-slate-600 leading-relaxed font-serif">
+                        "{reportData.teacherComment}"
+                      </p>
                       <div className="mt-3 pt-2 border-t border-dashed border-slate-100 flex items-center justify-between text-[8px] font-bold uppercase tracking-wider text-slate-400">
                         <span>Signature: Signed</span>
                         <span>Official</span>
@@ -761,9 +1191,13 @@ export default function StudentReportView() {
                     <div className="bg-white border-l-4 border-accent rounded-r-xl p-4 shadow-sm">
                       <div className="flex items-center gap-1.5 mb-2">
                         <Award className="w-3.5 h-3.5 text-accent" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-accent">Principal's Verdict</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-accent">
+                          Principal's Verdict
+                        </span>
                       </div>
-                      <p className="text-xs italic text-slate-600 leading-relaxed font-serif">"{reportData.principalComment}"</p>
+                      <p className="text-xs italic text-slate-600 leading-relaxed font-serif">
+                        "{reportData.principalComment}"
+                      </p>
                       <div className="mt-3 pt-2 border-t border-dashed border-slate-100 flex items-center justify-between text-[8px] font-bold uppercase tracking-wider text-slate-400">
                         <span>Seal: Approved & Stamped</span>
                         <span>NDA STAFF SCHOOL</span>
@@ -777,7 +1211,9 @@ export default function StudentReportView() {
                       <ShieldCheck className="w-4 h-4" />
                       <span>Official Digitally Signed Document</span>
                     </div>
-                    <p>© {new Date().getFullYear()} NDA STAFF SECONDARY SCHOOL</p>
+                    <p>
+                      © {new Date().getFullYear()} NDA STAFF SECONDARY SCHOOL
+                    </p>
                   </div>
                 </div>
               </div>
@@ -793,21 +1229,47 @@ export default function StudentReportView() {
         This resolves the critical issue where mobile viewports would export a squeezed, mobile-scaled PDF!
       */}
       <div className="pdf-export-container absolute inset-x-0 top-0 opacity-0 pointer-events-none -z-50 print:static print:opacity-100 print:pointer-events-auto print:z-auto print:w-full print:block">
-        <div ref={reportRef} className="report-sheet-page bg-white flex flex-col p-12 border-[12px] border-double relative overflow-hidden" style={{ borderColor: '#2563eb', width: '210mm', height: '296mm', boxSizing: 'border-box' }}>
+        <div
+          ref={reportRef}
+          className="report-sheet-page bg-white flex flex-col p-12 border-[12px] border-double relative overflow-hidden"
+          style={{
+            borderColor: "#2563eb",
+            width: "210mm",
+            height: "296mm",
+            boxSizing: "border-box",
+          }}
+        >
           {/* Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
-            <img src={LOGO_BASE64} alt="" className="w-[600px] h-[600px] object-contain grayscale"  />
+            <img
+              src={LOGO_BASE64}
+              alt=""
+              className="w-[600px] h-[600px] object-contain grayscale"
+            />
           </div>
 
           {/* Header */}
-          <div className="flex justify-between items-start border-b-4 pb-8 mb-10" style={{ borderColor: '#2563eb' }}>
+          <div
+            className="flex justify-between items-start border-b-4 pb-8 mb-10"
+            style={{ borderColor: "#2563eb" }}
+          >
             <div className="w-32">
-              <img src={LOGO_BASE64} alt="NDA Logo" className="w-28 h-28 object-contain"  />
+              <img
+                src={LOGO_BASE64}
+                alt="NDA Logo"
+                className="w-28 h-28 object-contain"
+              />
             </div>
             <div className="flex-1 text-center px-8">
-              <h1 className="text-4xl font-serif font-black tracking-tighter text-red-600 mb-1">NDA Staff Secondary School</h1>
-              <p className="text-[11px] font-bold tracking-[0.2em] text-red-500/80 uppercase mb-0.5">Knowledge · Discipline · Excellence</p>
-              <p className="text-[11px] font-medium text-red-400 mb-4 italic">Nigerian Defence Academy, Kaduna State, Nigeria</p>
+              <h1 className="text-4xl font-serif font-black tracking-tighter text-red-600 mb-1">
+                NDA Staff Secondary School
+              </h1>
+              <p className="text-[11px] font-bold tracking-[0.2em] text-red-500/80 uppercase mb-0.5">
+                Knowledge · Discipline · Excellence
+              </p>
+              <p className="text-[11px] font-medium text-red-400 mb-4 italic">
+                Nigerian Defence Academy, Kaduna State, Nigeria
+              </p>
               <div className="flex justify-center gap-8 text-[11px] font-bold uppercase tracking-widest text-slate-500">
                 <span>{reportData.session} Session</span>
                 <span className="w-1.5 h-1.5 bg-accent rounded-full self-center"></span>
@@ -815,13 +1277,16 @@ export default function StudentReportView() {
               </div>
             </div>
             <div className="w-32 flex justify-end">
-              <div className="w-20 h-24 border-2 p-0.5 shadow-md relative overflow-hidden flex items-center justify-center bg-white" style={{ borderColor: '#2563eb' }}>
+              <div
+                className="w-20 h-24 border-2 p-0.5 shadow-md relative overflow-hidden flex items-center justify-center bg-white"
+                style={{ borderColor: "#2563eb" }}
+              >
                 {student?.passportPhoto ? (
-                  <img 
-                    src={student.passportPhoto} 
-                    alt="Student Passport" 
-                    className="w-full h-full object-cover" 
-                    style={{ imageRendering: 'pixelated' }} 
+                  <img
+                    src={student.passportPhoto}
+                    alt="Student Passport"
+                    className="w-full h-full object-cover"
+                    style={{ imageRendering: "pixelated" }}
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-[8px] font-bold text-center uppercase tracking-tighter bg-slate-50 text-slate-400 gap-1">
@@ -836,28 +1301,52 @@ export default function StudentReportView() {
           {/* Student Info Grid */}
           <div className="grid grid-cols-3 gap-y-6 gap-x-12 mb-12 bg-slate-50/50 p-8 border border-slate-100">
             <div className="space-y-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Student Name</p>
-              <p className="text-sm font-bold text-primary">{reportData.name}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                Student Name
+              </p>
+              <p className="text-sm font-bold text-primary">
+                {reportData.name}
+              </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Admission No</p>
-              <p className="text-sm font-bold text-primary">{reportData.admissionNo}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                Admission No
+              </p>
+              <p className="text-sm font-bold text-primary">
+                {reportData.admissionNo}
+              </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Gender</p>
-              <p className="text-sm font-bold text-primary">{reportData.gender}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                Gender
+              </p>
+              <p className="text-sm font-bold text-primary">
+                {reportData.gender}
+              </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Class</p>
-              <p className="text-sm font-bold text-primary">{reportData.class} {reportData.arm}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                Class
+              </p>
+              <p className="text-sm font-bold text-primary">
+                {reportData.class} {reportData.arm}
+              </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Attendance</p>
-              <p className="text-sm font-bold text-primary">{reportData.attendance}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                Attendance
+              </p>
+              <p className="text-sm font-bold text-primary">
+                {reportData.attendance}
+              </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Position</p>
-              <p className="text-sm font-bold text-accent">{reportData.position}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                Position
+              </p>
+              <p className="text-sm font-bold text-accent">
+                {reportData.position}
+              </p>
             </div>
           </div>
 
@@ -866,27 +1355,55 @@ export default function StudentReportView() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-primary text-white">
-                  <th className="p-4 text-left text-[10px] font-bold uppercase tracking-widest border border-primary">Subject</th>
-                  <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">CA (40)</th>
-                  <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">Exam (60)</th>
-                  <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">Total (100)</th>
-                  <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">Grade</th>
-                  <th className="p-4 text-left text-[10px] font-bold uppercase tracking-widest border border-primary">Remarks</th>
+                  <th className="p-4 text-left text-[10px] font-bold uppercase tracking-widest border border-primary">
+                    Subject
+                  </th>
+                  <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">
+                    CA (40)
+                  </th>
+                  <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">
+                    Exam (60)
+                  </th>
+                  <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">
+                    Total (100)
+                  </th>
+                  <th className="p-4 text-center text-[10px] font-bold uppercase tracking-widest border border-primary">
+                    Grade
+                  </th>
+                  <th className="p-4 text-left text-[10px] font-bold uppercase tracking-widest border border-primary">
+                    Remarks
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {reportData.subjects.map((sub, idx) => (
-                  <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}>
-                    <td className="p-4 text-sm font-bold text-primary border border-slate-200">{sub.name}</td>
-                    <td className="p-4 text-center text-sm font-medium border border-slate-200">{sub.ca}</td>
-                    <td className="p-4 text-center text-sm font-medium border border-slate-200">{sub.exam}</td>
-                    <td className="p-4 text-center text-sm font-bold border border-slate-200" style={{ color: sub.total >= 50 ? '#2563eb' : '#ef4444' }}>{sub.total}</td>
+                  <tr
+                    key={idx}
+                    className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/30"}
+                  >
+                    <td className="p-4 text-sm font-bold text-primary border border-slate-200">
+                      {sub.name}
+                    </td>
+                    <td className="p-4 text-center text-sm font-medium border border-slate-200">
+                      {sub.ca}
+                    </td>
+                    <td className="p-4 text-center text-sm font-medium border border-slate-200">
+                      {sub.exam}
+                    </td>
+                    <td
+                      className="p-4 text-center text-sm font-bold border border-slate-200"
+                      style={{ color: sub.total >= 50 ? "#2563eb" : "#ef4444" }}
+                    >
+                      {sub.total}
+                    </td>
                     <td className="p-4 text-center border border-slate-200">
                       <span className="px-3 py-1 bg-primary/5 text-primary text-[10px] font-black border border-primary/10">
                         {sub.grade}
                       </span>
                     </td>
-                    <td className="p-4 text-sm font-medium italic text-slate-500 border border-slate-200">{sub.remark}</td>
+                    <td className="p-4 text-sm font-medium italic text-slate-500 border border-slate-200">
+                      {sub.remark}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -897,20 +1414,32 @@ export default function StudentReportView() {
           <div className="grid grid-cols-2 gap-12 mb-16">
             <div className="space-y-4">
               <div className="p-6 bg-slate-50 border-l-4 border-primary">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Form Teacher's Comment</p>
-                <p className="text-sm italic font-serif text-primary">"{reportData.teacherComment}"</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                  Form Teacher's Comment
+                </p>
+                <p className="text-sm italic font-serif text-primary">
+                  "{reportData.teacherComment}"
+                </p>
               </div>
               <div className="pt-8 border-t border-dashed border-slate-300">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Teacher's Signature</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                  Teacher's Signature
+                </p>
               </div>
             </div>
             <div className="space-y-4">
               <div className="p-6 bg-slate-50 border-l-4 border-accent">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Principal's Comment</p>
-                <p className="text-sm italic font-serif text-primary">"{reportData.principalComment}"</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                  Principal's Comment
+                </p>
+                <p className="text-sm italic font-serif text-primary">
+                  "{reportData.principalComment}"
+                </p>
               </div>
               <div className="pt-8 border-t border-dashed border-slate-300">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Principal's Signature & Stamp</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                  Principal's Signature & Stamp
+                </p>
               </div>
             </div>
           </div>
@@ -918,11 +1447,14 @@ export default function StudentReportView() {
           {/* Footer Info */}
           <div className="flex justify-between items-end pt-8 border-t-2 border-slate-100 mt-auto">
             <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400">
-              Generated on {new Date().toLocaleDateString()} | NDA Staff School Portal
+              Generated on {new Date().toLocaleDateString()} | NDA Staff School
+              Portal
             </div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600">Official Digital Document</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600">
+                Official Digital Document
+              </span>
             </div>
           </div>
         </div>

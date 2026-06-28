@@ -50,14 +50,64 @@ export default function Login() {
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Secret combo to toggle admin: Alt + A (or Option + A)
+      if (e.altKey && e.key.toLowerCase() === 'a') {
+        if (e.repeat) return;
+        e.preventDefault();
+        setRole(prev => {
+          const newRole = prev === 'admin' ? 'student' : 'admin';
+          toast.info(newRole === 'admin' ? 'Admin Access Unlocked' : 'Student Access Mode');
+          return newRole;
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const [logoClicks, setLogoClicks] = useState(0);
+
+  const handleLogoClick = () => {
+    const newClicks = logoClicks + 1;
+    setLogoClicks(newClicks);
+    if (newClicks >= 3) {
+      setRole(prev => prev === 'admin' ? 'student' : 'admin');
+      toast.info(role === 'student' ? 'Admin Access Unlocked' : 'Student Access Mode', { duration: 3000 });
+      setLogoClicks(0);
+    }
+    // reset clicks after 2 seconds
+    setTimeout(() => {
+      setLogoClicks(0);
+    }, 2000);
+  };
+
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     // Bypass Firebase auth for demo mode
     if (adminEmail.trim() === 'admin@NDA.academy' && adminPassword.trim() === 'Bichi123') {
+      localStorage.setItem('admin_role', 'admin');
       toast.success('Admin login successful (Demo Mode)!');
       navigate('/admin');
+      setIsLoading(false);
+      return;
+    }
+
+    if (adminEmail.trim() === 'pta@NDA.academy' && adminPassword.trim() === 'pta123') {
+      localStorage.setItem('admin_role', 'pta_financial_secretary');
+      toast.success('PTA Financial Secretary login successful!');
+      navigate('/admin/pta-payments');
+      setIsLoading(false);
+      return;
+    }
+
+    if (adminEmail.trim() === 'bursar@NDA.academy' && adminPassword.trim() === 'bursar123') {
+      localStorage.setItem('admin_role', 'bursar');
+      toast.success('Bursar login successful!');
+      navigate('/admin/bursary');
       setIsLoading(false);
       return;
     }
@@ -105,7 +155,7 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!regNo || !studentClass || !subject) {
+    if (!regNo || !studentClass) {
       toast.error('Please fill in all fields to access the portal.');
       setIsLoading(false);
       return;
@@ -177,7 +227,7 @@ export default function Login() {
       >
         <Card className="border-none shadow-2xl bg-white/80 backdrop-blur-xl">
           <CardHeader className="space-y-1 text-center pb-4">
-            <div className="flex flex-col items-center mb-2">
+            <div className="flex flex-col items-center mb-2 cursor-pointer" onClick={handleLogoClick}>
               <img src={LOGO_BASE64} alt="NDA Logo" className="w-16 h-16 object-contain mb-2"  />
               <div className="w-12 h-1 bg-accent mb-2"></div>
             </div>
@@ -189,11 +239,14 @@ export default function Login() {
             </div>
           </CardHeader>
           
-          <Tabs defaultValue={role} onValueChange={(v) => setRole(v as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-100/50 p-1 mx-6 mb-4 w-auto rounded-none">
-              <TabsTrigger value="student" className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-bold uppercase tracking-widest">CBT Portal (Student)</TabsTrigger>
-              <TabsTrigger value="admin" className="rounded-none data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-bold uppercase tracking-widest">Staff Portal (Admin)</TabsTrigger>
-            </TabsList>
+          <Tabs value={role} onValueChange={(v) => setRole(v as any)} className="w-full">
+            {role === 'admin' && (
+              <div className="px-6 mb-4 text-center">
+                <span className="inline-block bg-primary/10 text-primary px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full">
+                  Admin Access Mode
+                </span>
+              </div>
+            )}
 
             <TabsContent value="student" className="space-y-4 mt-0">
               <div className="px-6 pb-4 text-center">
@@ -201,6 +254,12 @@ export default function Login() {
               </div>
               <form onSubmit={handleStudentLogin}>
                 <CardContent className="space-y-5">
+                  <div className="bg-blue-50 text-blue-800 p-3 text-xs font-medium rounded-none border border-blue-200 text-center space-y-2">
+                    <div>
+                      Demo Student Reg No (Password):<br />
+                      <b>NDA/23/001</b> or <b>NDA/23/002</b>
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="regNo" className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Registration Number (Password)</Label>
                     <div className="relative">
@@ -223,48 +282,33 @@ export default function Login() {
                       </button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Class</Label>
-                      <Select onValueChange={(val) => { setStudentClass(val); setSubject(''); }} required>
-                        <SelectTrigger className="rounded-none border-slate-200">
-                          <SelectValue placeholder="Select Class" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Senior Secondary (Science)</SelectLabel>
-                            <SelectItem value="sss1_science">SSS 1 Science</SelectItem>
-                            <SelectItem value="sss2_science">SSS 2 Science</SelectItem>
-                            <SelectItem value="sss3_science">SSS 3 Science</SelectItem>
-                          </SelectGroup>
-                          <SelectGroup>
-                            <SelectLabel>Senior Secondary (Art)</SelectLabel>
-                            <SelectItem value="sss1_art">SSS 1 Art</SelectItem>
-                            <SelectItem value="sss2_art">SSS 2 Art</SelectItem>
-                            <SelectItem value="sss3_art">SSS 3 Art</SelectItem>
-                          </SelectGroup>
-                          <SelectGroup>
-                            <SelectLabel>Senior Secondary (Commerce)</SelectLabel>
-                            <SelectItem value="sss1_commerce">SSS 1 Commerce</SelectItem>
-                            <SelectItem value="sss2_commerce">SSS 2 Commerce</SelectItem>
-                            <SelectItem value="sss3_commerce">SSS 3 Commerce</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Subject</Label>
-                      <Select onValueChange={setSubject} value={subject} required disabled={!studentClass}>
-                        <SelectTrigger className="rounded-none border-slate-200">
-                          <SelectValue placeholder={studentClass ? "Select Subject" : "Class First"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableSubjects(studentClass).map(sub => (
-                            <SelectItem key={sub} value={sub.toLowerCase()}>{sub}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Class</Label>
+                    <Select onValueChange={(val) => { setStudentClass(val); }} required>
+                      <SelectTrigger className="rounded-none border-slate-200">
+                        <SelectValue placeholder="Select Class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Senior Secondary (Science)</SelectLabel>
+                          <SelectItem value="sss1_science">SSS 1 Science</SelectItem>
+                          <SelectItem value="sss2_science">SSS 2 Science</SelectItem>
+                          <SelectItem value="sss3_science">SSS 3 Science</SelectItem>
+                        </SelectGroup>
+                        <SelectGroup>
+                          <SelectLabel>Senior Secondary (Art)</SelectLabel>
+                          <SelectItem value="sss1_art">SSS 1 Art</SelectItem>
+                          <SelectItem value="sss2_art">SSS 2 Art</SelectItem>
+                          <SelectItem value="sss3_art">SSS 3 Art</SelectItem>
+                        </SelectGroup>
+                        <SelectGroup>
+                          <SelectLabel>Senior Secondary (Commerce)</SelectLabel>
+                          <SelectItem value="sss1_commerce">SSS 1 Commerce</SelectItem>
+                          <SelectItem value="sss2_commerce">SSS 2 Commerce</SelectItem>
+                          <SelectItem value="sss3_commerce">SSS 3 Commerce</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4 pt-4">
@@ -291,9 +335,19 @@ export default function Login() {
               </div>
               <form onSubmit={handleAdminLogin}>
                 <CardContent className="space-y-5">
-                  <div className="bg-blue-50 text-blue-800 p-3 text-xs font-medium rounded-none border border-blue-200 text-center">
-                    Demo Bypass Credentials:<br />
-                    <b>admin@NDA.academy</b> / <b>Bichi123</b>
+                  <div className="bg-blue-50 text-blue-800 p-3 text-xs font-medium rounded-none border border-blue-200 text-center space-y-2">
+                    <div>
+                      Admin Bypass:<br />
+                      <b>admin@NDA.academy</b> / <b>Bichi123</b>
+                    </div>
+                    <div className="border-t border-blue-200 pt-2">
+                      PTA Financial Secretary Bypass:<br />
+                      <b>pta@NDA.academy</b> / <b>pta123</b>
+                    </div>
+                    <div className="border-t border-blue-200 pt-2">
+                      Bursar Bypass:<br />
+                      <b>bursar@NDA.academy</b> / <b>bursar123</b>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="adminEmail" className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Staff Email</Label>
