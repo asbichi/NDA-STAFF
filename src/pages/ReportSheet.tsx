@@ -31,6 +31,7 @@ import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Subject {
   name: string;
@@ -239,9 +240,24 @@ const SingleReport = React.forwardRef<HTMLDivElement, { data: StudentReportData,
         <p className="text-xl font-serif font-black text-primary leading-tight">{data.position}</p>
       </div>
       <div className="p-3 border text-center border-[#f1f5f9] bg-[#f9fafb]">
-        <p className="text-[8px] font-bold uppercase tracking-widest mb-0.5" style={{ color: '#94a3b8' }}>Attendance</p>
-        <p className="text-xl font-serif font-black text-primary leading-tight">{data.attendance}</p>
+        <p className="text-[8px] font-bold uppercase tracking-widest mb-0.5" style={{ color: '#94a3b8' }}>Total Subjects</p>
+        <p className="text-xl font-serif font-black text-primary leading-tight">{data.subjects.length}</p>
       </div>
+    </div>
+
+    {/* Performance Chart */}
+    <div className="mb-6 h-40">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data.subjects.map(s => ({ name: s.name.length > 12 ? s.name.substring(0, 10) + '...' : s.name, score: s.total }))} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
+          <XAxis dataKey="name" tick={{ fontSize: 7, fill: '#64748b' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 8, fill: '#64748b' }} axisLine={false} tickLine={false} />
+          <Tooltip 
+            contentStyle={{ backgroundColor: '#fff', fontSize: '10px', borderRadius: '4px', border: '1px solid #e2e8f0', padding: '4px 8px' }}
+            cursor={{ fill: '#f1f5f9' }}
+          />
+          <Bar dataKey="score" fill="#0f172a" radius={[2, 2, 0, 0]} maxBarSize={30} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
 
     {/* Remarks & Signatures */}
@@ -284,6 +300,7 @@ const SingleReport = React.forwardRef<HTMLDivElement, { data: StudentReportData,
     
     {/* Footer */}
     <div className="mt-8 pt-3 border-t flex justify-between items-center text-[7px] font-bold uppercase tracking-[0.2em] border-[#f1f5f9] text-[#cbd5e1]">
+      <p>Session Attendance: {data.attendance}</p>
       <p>© {new Date().getFullYear()} NDA Staff Secondary School Management System</p>
       <p>{new Date().toLocaleDateString()} · {new Date().toLocaleTimeString()}</p>
     </div>
@@ -338,13 +355,30 @@ const SingleReportPhone = ({ data }: { data: StudentReportData }) => {
             <span className="text-xs font-serif font-black text-amber-700 mt-0.5">{data.position}</span>
           </div>
           <div className="flex flex-col justify-between p-1 bg-emerald-50/50 border border-emerald-100 rounded-md">
-            <span className="text-[7px] font-bold uppercase tracking-widest text-slate-400">Presence</span>
-            <span className="text-[9px] font-serif font-black text-emerald-700 mt-1 leading-none">{data.attendance}</span>
+            <span className="text-[7px] font-bold uppercase tracking-widest text-slate-400">Subjects</span>
+            <span className="text-[9px] font-serif font-black text-emerald-700 mt-1 leading-none">{data.subjects.length}</span>
           </div>
           <div className="flex flex-col justify-between p-1 bg-slate-50 border border-slate-100 rounded-md">
             <span className="text-[7px] font-bold uppercase tracking-widest text-slate-400">Total</span>
             <span className="text-xs font-serif font-black text-slate-700 mt-0.5">{totalScore}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Performance Chart */}
+      <div className="px-3 mt-4 h-32">
+        <div className="bg-white p-2 shadow-sm border border-slate-100 rounded-lg h-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.subjects.map(s => ({ name: s.name.length > 8 ? s.name.substring(0, 8) + '...' : s.name, score: s.total }))} margin={{ top: 5, right: 0, left: -30, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 6, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 6, fill: '#64748b' }} axisLine={false} tickLine={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#fff', fontSize: '8px', borderRadius: '4px', border: '1px solid #e2e8f0', padding: '2px 4px' }}
+                cursor={{ fill: '#f1f5f9' }}
+              />
+              <Bar dataKey="score" fill="#0f172a" radius={[2, 2, 0, 0]} maxBarSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -460,6 +494,11 @@ const SingleReportPhone = ({ data }: { data: StudentReportData }) => {
           <span className="text-[8px] font-black uppercase tracking-widest text-accent block mb-1">Principal's Verdict</span>
           <p className="text-[10px] italic text-slate-600 font-serif">"{data.principalComment}"</p>
         </div>
+      </div>
+
+      <div className="px-3 mt-6 text-center text-[7px] font-bold uppercase tracking-[0.2em] text-[#cbd5e1]">
+        <p>Session Attendance: {data.attendance}</p>
+        <p className="mt-1">© {new Date().getFullYear()} NDA Staff Secondary School</p>
       </div>
     </div>
   );

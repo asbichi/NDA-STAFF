@@ -185,10 +185,31 @@ export default function ScoreEntry() {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3 print:hidden"
+          className="flex flex-wrap items-center gap-3 print:hidden"
         >
           <Button variant="outline" className="rounded-none border-primary text-primary hover:bg-primary hover:text-white" onClick={() => window.print()}>
             Print Score Sheet
+          </Button>
+          <Button variant="outline" className="rounded-none border-green-600 text-green-600 hover:bg-green-600 hover:text-white" onClick={async () => {
+            if (!students.length || !selectedSubject) {
+              toast.error("Please load students and select a subject first.");
+              return;
+            }
+            if (!window.confirm("Seed random scores for these students? This will overwrite unsaved changes in the input fields.")) return;
+            const newScores: any = {};
+            students.forEach(s => {
+              newScores[s.id] = {
+                ca1: Math.floor(Math.random() * 10).toString(),
+                ca2: Math.floor(Math.random() * 10).toString(),
+                ca3: Math.floor(Math.random() * 10).toString(),
+                ca4: Math.floor(Math.random() * 10).toString(),
+                exam: Math.floor(Math.random() * 60).toString(),
+              };
+            });
+            setScores(newScores);
+            toast.success("Random scores generated! Click 'Save Assessments' to save to database.");
+          }}>
+            Seed Random Scores
           </Button>
           <div className="px-4 py-2 bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
             <FileEdit className="w-3.5 h-3.5" />

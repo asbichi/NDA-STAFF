@@ -190,6 +190,11 @@
 
 @layer utilities {
   @media print {
+    @page {
+      margin: 0;
+      size: A4 portrait;
+    }
+
     .print-break-after-page {
       break-after: page;
       page-break-after: always;
@@ -198,6 +203,8 @@
     body {
       background: white !important;
       overflow: visible !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     /* Ensure the main content area expands for printing */
@@ -210,19 +217,6 @@
     /* Hide sidebar and other non-report elements during print */
     .print\:hidden {
       display: none !important;
-    }
-
-    /* Remove padding/margins from containers during print */
-    .p-4, .p-8, .md\:p-8 {
-      padding: 0 !important;
-    }
-
-    .shadow-sm, .shadow-xl, .shadow-md {
-      box-shadow: none !important;
-    }
-
-    .border {
-      border-color: #eee !important;
     }
   }
 }

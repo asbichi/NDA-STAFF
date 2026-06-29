@@ -136,7 +136,20 @@ export default function AdminCBTResults() {
                       <TableCell className="font-medium text-slate-700">{r.studentId}</TableCell>
                       <TableCell>{r.studentName}</TableCell>
                       <TableCell>{r.class}</TableCell>
-                      <TableCell>{r.examTitle || r.subject || 'General Assessment'}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium text-slate-800">{r.examTitle || r.subject || 'General Assessment'}</span>
+                          {r.subjectScores && Object.keys(r.subjectScores).length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {Object.entries(r.subjectScores).map(([sub, data]: [string, any]) => (
+                                <span key={sub} className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 border border-slate-200">
+                                  {sub}: <span className="font-bold text-slate-800">{data.score}/{data.total}</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="font-bold text-blue-600">{r.score} / {r.total}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${

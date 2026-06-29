@@ -33,7 +33,8 @@ export default function CBTExam() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const [isExamStarted, setIsExamStarted] = useState(false);
+  const [activeSubject, setActiveSubject] = useState<string | null>(null);
+  const [completedSubjects, setCompletedSubjects] = useState<string[]>([]);
 
   const studentSession = JSON.parse(localStorage.getItem('student_session') || '{}');
   const candidateName = studentSession.name || 'CANDIDATE NAME';
@@ -41,7 +42,7 @@ export default function CBTExam() {
 
   // Derive subjects from questions
   const subjects = Array.from(new Set(questions.map(q => q.subject)));
-  const currentSubject = questions[currentQuestionIndex]?.subject || '';
+  const currentSubject = activeSubject || '';
 
   // Mock questions for now
   useEffect(() => {
@@ -138,17 +139,6 @@ export default function CBTExam() {
       const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
       const { db } = await import('../firebase');
       
-      await addDoc(collection(db, 'cbt_results'), {
-        studentId: studentSession.regNo || 'Unknown',
-        studentName: studentSession.name || 'Unknown Student',
-        class: studentSession.class || 'Unknown Class',
-        examTitle: examId || 'CBT Assessment',
-        score: score,
-        total: questions.length,
-        percentage: percentage,
-        date: serverTimestamp()
-      });
-      
       const subjectScores: Record<string, { score: number, total: number }> = {};
       subjects.forEach(sub => {
         const subQuestions = questions.filter(q => q.subject === sub);
@@ -157,6 +147,18 @@ export default function CBTExam() {
           if (answers[q.id] === q.correctAnswer) subScore++;
         });
         subjectScores[sub] = { score: subScore, total: subQuestions.length };
+      });
+
+      await addDoc(collection(db, 'cbt_results'), {
+        studentId: studentSession.regNo || 'Unknown',
+        studentName: studentSession.name || 'Unknown Student',
+        class: studentSession.class || 'Unknown Class',
+        examTitle: examId || 'CBT Assessment',
+        score: score,
+        total: questions.length,
+        percentage: percentage,
+        subjectScores: subjectScores,
+        date: serverTimestamp()
       });
 
       toast.success('Examination submitted successfully!');
@@ -173,7 +175,7 @@ export default function CBTExam() {
   }, [isSubmitted, navigate, questions, answers, studentSession, timeLeft]);
 
   useEffect(() => {
-    if (!isExamStarted) return;
+    if (!activeSubject) return;
     
     if (timeLeft <= 0 && !isSubmitted) {
       handleSubmit();
@@ -185,11 +187,11 @@ export default function CBTExam() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, handleSubmit, isSubmitted, isExamStarted]);
+  }, [timeLeft, handleSubmit, isSubmitted, activeSubject]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isSubmitted || !isExamStarted) return;
+      if (isSubmitted || !activeSubject) return;
       const key = e.key.toUpperCase();
       
       const currentQ = questions[currentQuestionIndex];
@@ -208,7 +210,7 @@ export default function CBTExam() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentQuestionIndex, questions, isSubmitted]);
+  }, [currentQuestionIndex, questions, isSubmitted, activeSubject]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -225,7 +227,8 @@ export default function CBTExam() {
 
   if (loading || !currentQuestion) return <div className="min-h-screen bg-green-50 flex items-center justify-center">Loading examination engine...</div>;
 
-  if (!isExamStarted) {
+  if (!activeSubject) {
+    const allCompleted = subjects.every(sub => completedSubjects.includes(sub));
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-sans p-6">
         <Card className="w-full max-w-4xl border-t-4 border-t-green-700 shadow-2xl bg-white rounded-none">
@@ -246,22 +249,47 @@ export default function CBTExam() {
             <div className="space-y-4">
               <h4 className="font-bold text-slate-800 uppercase text-sm border-b pb-2">Examination Instructions</h4>
               <ul className="list-disc pl-5 space-y-3 text-slate-700 text-sm md:text-base leading-relaxed">
-                <li>This examination consists of four (4) subjects. Use the Subject Navigator to switch between subjects.</li>
-                <li>You have a total of <b>2 Hours</b> to complete all questions.</li>
-                <li>You can use the <b>Next</b> and <b>Previous</b> buttons to navigate through questions.</li>
+                <li>You have a total of <b>2 Hours</b> to complete all questions. The timer runs continuously.</li>
+                <li>You can use the <b>Next</b> and <b>Previous</b> buttons to navigate through questions in each paper.</li>
                 <li>Alternatively, you can use keyboard shortcuts: <b>A, B, C, D</b> to select answers, and <b>N</b> (Next) / <b>P</b> (Previous) to navigate.</li>
-                <li>An on-screen calculator is available at the top right of the screen.</li>
-                <li>Ensure you click on <b>Submit Examination</b> only when you are completely done.</li>
+                <li>When you finish a paper, it will automatically load the next subject in your combination.</li>
               </ul>
+            </div>
+
+            <div className="mt-8 border rounded-sm overflow-hidden">
+              <div className="bg-slate-100 border-b p-3">
+                <h4 className="font-bold text-slate-800 uppercase text-sm">Subject Combination</h4>
+              </div>
+              <div className="p-4 bg-white">
+                <p className="font-bold text-slate-700 uppercase tracking-widest leading-relaxed">
+                  {subjects.join(' • ')}
+                </p>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="bg-slate-50 border-t p-6 flex justify-center">
-            <Button 
-              onClick={() => setIsExamStarted(true)}
-              className="bg-green-700 hover:bg-green-800 text-white font-bold py-6 px-12 text-lg uppercase tracking-widest rounded shadow-lg"
-            >
-              Start Examination
-            </Button>
+            {allCompleted ? (
+              <Button 
+                onClick={handleSubmit}
+                className="bg-green-700 hover:bg-green-800 text-white font-bold py-6 px-12 text-lg uppercase tracking-widest rounded shadow-lg"
+              >
+                Submit Final Examination
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => {
+                  const nextSubject = subjects.find(sub => !completedSubjects.includes(sub));
+                  if (nextSubject) {
+                    setActiveSubject(nextSubject);
+                    const firstIndex = questions.findIndex(q => q.subject === nextSubject);
+                    setCurrentQuestionIndex(firstIndex);
+                  }
+                }}
+                className="bg-blue-700 hover:bg-blue-800 text-white font-bold py-6 px-12 text-lg uppercase tracking-widest rounded shadow-lg"
+              >
+                {completedSubjects.length > 0 ? "Start Next Paper" : "Start Examination"}
+              </Button>
+            )}
           </CardFooter>
         </Card>
       </div>
@@ -327,36 +355,11 @@ export default function CBTExam() {
           {/* Subject Navigation Tabs */}
           <Card className="rounded-none border-t-4 border-t-blue-700 shadow-md flex-1">
             <CardHeader className="bg-gray-50 border-b py-3 px-4">
-              <CardTitle className="text-sm font-bold text-gray-700 uppercase">Subjects</CardTitle>
+              <CardTitle className="text-sm font-bold text-gray-700 uppercase">Current Paper</CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="flex flex-col">
-                {subjects.map((subject, idx) => {
-                  const subjectQuestions = questions.filter(q => q.subject === subject);
-                  const answeredCount = subjectQuestions.filter(q => answers[q.id]).length;
-                  const isActive = currentSubject === subject;
-                  
-                  return (
-                    <button
-                      key={subject}
-                      onClick={() => {
-                        const firstIndex = questions.findIndex(q => q.subject === subject);
-                        setCurrentQuestionIndex(firstIndex);
-                      }}
-                      className={`px-4 py-3 text-left border-b text-sm font-bold flex justify-between items-center transition-colors ${
-                        isActive 
-                          ? 'bg-blue-50 border-l-4 border-l-blue-600 text-blue-800' 
-                          : 'hover:bg-gray-50 border-l-4 border-l-transparent text-gray-600'
-                      }`}
-                    >
-                      <span>{idx + 1}. {subject}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-mono ${answeredCount === subjectQuestions.length ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                        {answeredCount}/{subjectQuestions.length}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+            <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+              <h3 className="font-bold text-blue-900 text-center uppercase leading-snug">{currentSubject}</h3>
+              <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-widest text-center">Do not refresh</p>
             </CardContent>
           </Card>
         </div>
@@ -407,20 +410,53 @@ export default function CBTExam() {
             <div className="bg-gray-100 border-t border-gray-300 p-4 flex justify-between items-center">
               <Button 
                 variant="outline"
-                onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
-                disabled={currentQuestionIndex === 0}
+                onClick={() => {
+                  const newLocalIndex = currentSubjectIndex - 1;
+                  const newGlobalIndex = questions.findIndex(q => q.id === currentSubjectQuestions[newLocalIndex].id);
+                  setCurrentQuestionIndex(newGlobalIndex);
+                }}
+                disabled={currentSubjectIndex === 0}
                 className="bg-white border-gray-400 text-gray-800 hover:bg-gray-50 rounded-sm font-bold min-w-[120px]"
               >
                 <ChevronLeft className="w-4 h-4 mr-1" /> Previous
               </Button>
               
-              <Button 
-                onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-                disabled={currentQuestionIndex === questions.length - 1}
-                className="bg-blue-700 hover:bg-blue-800 text-white rounded-sm font-bold min-w-[120px] shadow-sm"
-              >
-                Next <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+              {currentSubjectIndex === currentSubjectQuestions.length - 1 ? (
+                <Button 
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to submit ${currentSubject}? You cannot return to this paper.`)) {
+                      const newCompleted = [...completedSubjects, currentSubject];
+                      setCompletedSubjects(newCompleted);
+                      
+                      // Find next subject
+                      const nextSubject = subjects.find(sub => !newCompleted.includes(sub));
+                      if (nextSubject) {
+                        setActiveSubject(nextSubject);
+                        const firstIndex = questions.findIndex(q => q.subject === nextSubject);
+                        setCurrentQuestionIndex(firstIndex);
+                        toast.info(`Started next paper: ${nextSubject}`);
+                      } else {
+                        setActiveSubject(null); // Return to dashboard for final submit
+                        toast.success("All papers completed! Please submit the final examination.");
+                      }
+                    }
+                  }}
+                  className="bg-green-700 hover:bg-green-800 text-white rounded-sm font-bold min-w-[120px] shadow-sm uppercase tracking-widest"
+                >
+                  Submit Paper
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => {
+                    const newLocalIndex = currentSubjectIndex + 1;
+                    const newGlobalIndex = questions.findIndex(q => q.id === currentSubjectQuestions[newLocalIndex].id);
+                    setCurrentQuestionIndex(newGlobalIndex);
+                  }}
+                  className="bg-blue-700 hover:bg-blue-800 text-white rounded-sm font-bold min-w-[120px] shadow-sm"
+                >
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              )}
             </div>
           </Card>
         </div>
