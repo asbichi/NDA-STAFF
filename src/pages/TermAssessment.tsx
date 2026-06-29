@@ -139,7 +139,7 @@ export default function TermAssessment() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <h1 className="text-4xl font-serif font-bold text-primary tracking-tight">Term Assessment & Attendance</h1>
+          <h1 className="text-4xl font-serif font-bold text-primary tracking-tight">Attendance & Assessment</h1>
           <p className="text-slate-500 mt-2 font-light print:hidden">Enter attendance, teacher, and principal remarks for the term.</p>
         </motion.div>
         

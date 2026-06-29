@@ -142,6 +142,7 @@ export default function CBTExam() {
         studentId: studentSession.regNo || 'Unknown',
         studentName: studentSession.name || 'Unknown Student',
         class: studentSession.class || 'Unknown Class',
+        examTitle: examId || 'CBT Assessment',
         score: score,
         total: questions.length,
         percentage: percentage,

@@ -405,10 +405,22 @@ const SingleReportPhone = ({ data }: { data: StudentReportData }) => {
                       transition={{ duration: 0.15 }}
                       className="overflow-hidden mt-2 pt-2 border-t border-slate-50"
                     >
-                      <div className="grid grid-cols-4 gap-1 text-center text-[9px] uppercase font-bold mb-2">
+                      <div className="grid grid-cols-7 gap-1 text-center text-[9px] uppercase font-bold mb-2">
                         <div className="p-1 bg-slate-50 rounded">
-                          <span className="text-[7px] text-slate-400 block">CA</span>
-                          <span className="text-slate-700">{sub.ca}</span>
+                          <span className="text-[7px] text-slate-400 block">CA1</span>
+                          <span className="text-slate-700">{sub.ca1 || '-'}</span>
+                        </div>
+                        <div className="p-1 bg-slate-50 rounded">
+                          <span className="text-[7px] text-slate-400 block">CA2</span>
+                          <span className="text-slate-700">{sub.ca2 || '-'}</span>
+                        </div>
+                        <div className="p-1 bg-slate-50 rounded">
+                          <span className="text-[7px] text-slate-400 block">CA3</span>
+                          <span className="text-slate-700">{sub.ca3 || '-'}</span>
+                        </div>
+                        <div className="p-1 bg-slate-50 rounded">
+                          <span className="text-[7px] text-slate-400 block">CA4</span>
+                          <span className="text-slate-700">{sub.ca4 || '-'}</span>
                         </div>
                         <div className="p-1 bg-slate-50 rounded">
                           <span className="text-[7px] text-slate-400 block">Exam</span>

@@ -296,11 +296,11 @@ export default function ScoreEntry() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Card className="border-slate-100 shadow-sm rounded-none overflow-hidden">
-            <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between py-6 px-8">
+          <Card className="border-slate-100 shadow-sm rounded-none overflow-hidden print:overflow-visible print:shadow-none print:border-none">
+            <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between py-6 px-8 print:p-0 print:border-b-2 print:border-slate-800 print:mb-4">
               <div>
-                <CardTitle className="text-[12px] font-bold uppercase tracking-[0.2em] text-primary">Student Performance Entry</CardTitle>
-                <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+                <CardTitle className="text-[12px] font-bold uppercase tracking-[0.2em] text-primary print:text-[14px]">Student Performance Entry</CardTitle>
+                <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1 print:text-black">
                   CA1 (10) + CA2 (10) + CA3 (10) + CA4 (10) + Exam (60) = Total (100)
                 </CardDescription>
               </div>
@@ -320,7 +320,7 @@ export default function ScoreEntry() {
                   <p className="text-[10px] font-bold uppercase tracking-widest">Retrieving Records...</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto print:overflow-visible print:w-full">
                   <Table>
                     <TableHeader className="bg-slate-50/50">
                       <TableRow className="border-b border-slate-100">

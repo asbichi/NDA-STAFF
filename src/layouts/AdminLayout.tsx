@@ -27,7 +27,7 @@ const sidebarGroups = [
     links: [
       { name: 'Students', path: '/admin/students', icon: Users },
       { name: 'Score Entry', path: '/admin/score-entry', icon: FileEdit },
-      { name: 'Term Assessment', path: '/admin/term-assessment', icon: ClipboardCheck },
+      { name: 'Attendance & Assessment', path: '/admin/term-assessment', icon: ClipboardCheck },
       { name: 'Report Sheets', path: '/admin/reports', icon: FileText },
     ]
   },

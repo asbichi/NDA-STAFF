@@ -110,6 +110,7 @@ export default function AdminCBTResults() {
                   <TableHead>Registration No</TableHead>
                   <TableHead>Student Name</TableHead>
                   <TableHead>Class</TableHead>
+                  <TableHead>Subject / Exam Title</TableHead>
                   <TableHead>Score</TableHead>
                   <TableHead>Percentage</TableHead>
                   <TableHead>Date Taken</TableHead>
@@ -118,14 +119,14 @@ export default function AdminCBTResults() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center">
+                    <TableCell colSpan={7} className="h-32 text-center">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600 mb-2" />
                       <p className="text-slate-500">Loading results...</p>
                     </TableCell>
                   </TableRow>
                 ) : results.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-slate-500">
+                    <TableCell colSpan={7} className="h-32 text-center text-slate-500">
                       No CBT results found.
                     </TableCell>
                   </TableRow>
@@ -135,6 +136,7 @@ export default function AdminCBTResults() {
                       <TableCell className="font-medium text-slate-700">{r.studentId}</TableCell>
                       <TableCell>{r.studentName}</TableCell>
                       <TableCell>{r.class}</TableCell>
+                      <TableCell>{r.examTitle || r.subject || 'General Assessment'}</TableCell>
                       <TableCell className="font-bold text-blue-600">{r.score} / {r.total}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${
